@@ -1,0 +1,92 @@
+# Neon Distrito (mundo aberto)
+
+Jogo 3D de mundo aberto no navegador: uma megacidade neon em 2088, com chuva, hologramas, carros voadores e
+rádio synthwave/industrial. **Sem violência**: ninguém se machuca, os pedestres desviam e batidas não causam dano.
+Cidade, nomes, músicas e modelos são originais (Neon Distrito). Nenhum nome, logo ou recurso de outros jogos.
+As chaves de save (`nd-save-v1` e afins) e o cache do PWA (`neon-dist-v1-…`) são próprios: não se misturam com o Solara Bay.
+
+## Como jogar
+
+Abra o link do GitHub Pages no navegador (celular ou computador) e toque em **Jogar**.
+
+**Computador**
+- WASD / setas: andar ou dirigir · Shift: correr · Espaço: pular / freio de mão
+- E: entrar/sair de veículo · Enter: iniciar missão perto de um ícone · F: foto · H: buzina
+- R: trocar rádio · M: mapa · P: celular · V: gravar vídeo · Shift no carro tunado: nitro
+- mouse: girar a câmera (clique para travar)
+- Carros de corrida: S/Espaço numa curva rápida = drift · Shift/N = nitro · T = volta para a pista
+- J: mochila a jato (Espaço sobe, Q/Ctrl desce) · G: chamar o helicóptero · B: chamar o seu veículo
+- L: piscar o farol (desafia um rival da Liga das Torres, à noite)
+- K: ir ao Circuito Plasma (pista de drift ao lado da Loft Prisma)
+
+**Celular**
+- Joystick à esquerda; botões à direita (Entrar/Sair, Pular/Freio, Foto, Buzina, Iniciar, 🔥 Nitro)
+- Ícones no topo: celular, mapa, rádio, câmera e 🔴 gravar. Toque no mapa grande para marcar um destino com GPS.
+- Atalhos pequenos: 🏁 corrida, 🎒 mochila a jato, 🚁 chamar helicóptero, 🚘 chamar o seu veículo, 🏠 ir para casa, ⚡ Circuito Plasma, 💡 piscar o farol (no carro de corrida, o botão 🌀 faz o drift)
+
+## O que tem
+
+- **Cidade:** Av. Holofote com arranha-céus e neon, orla de vidro, píer, farol; Núcleo Central de torres de vidro;
+  pontes sobre o canal; marina; roda-gigante; Setor industrial. Anúncios holográficos e carros voadores nas avenidas.
+- **Clima e luz:** ciclo dia/noite, pôr do sol, neon e reflexos à noite, chuva com raios, sombras, neblina e brilho (bloom).
+- **Veículos:** esportivo, clássico, SUV, sedã, táxi, moto e lancha, cada um com dirigibilidade própria.
+- **Vida na cidade:** cada morador tem uma rotina pelo relógio do jogo (casa, trabalho, café, almoço, praia, academia, bar, balada
+  e de volta para casa). Dá para ver gente sentada nas mesas, conversando em dupla, correndo, passeando com o cachorro, fazendo
+  compras (com sacola) e dançando. De noite a rua esvazia e quem sai vai para os bares e para a balada. Trânsito segue as ruas e para nos semáforos.
+- **Bares e restaurantes:** 14 lugares originais (Café Brisa, Sorveteria Coco Gelado, Bar Maré Alta, Restaurante Luar, Açaí do Píer,
+  Lanchonete Onda, Bar Neon Coral, cafés e bistrô no Centro, Clube Pulse, Academia do Núcleo…) com mesas, guarda-sóis,
+  varal de luzes e placa neon; cada um abre no seu horário e, a pé, você ouve a música da casa e o burburinho.
+- **Gaivotas:** bandos voam sobre a praia, pousam na areia e saem voando quando você chega perto.
+- **Presentes brilhantes:** 34 caixas espalhadas pelo mapa (aparecem no mapa como 🎁) dão poderes temporários: 🎒 Mochila Turbo,
+  🛹 Prancha Flutuante, 🪂 Planador, 🦘 Superpulo, 💪 Superforça (empurra carros do caminho com cuidado) e ⚡ Supercorrida.
+  Cada poder tem ícone e tempo no HUD; as caixas voltam depois de um tempo; o total fica salvo (3 mochilas liberam a turbo para sempre).
+- **Liga das Torres (rachas de rua):** das 19h às 5h, rivais esperam nos pontos 🏎️ do mapa. Chegue de carro e pisque o farol
+  (L ou 💡) para desafiar. Corrida pelas ruas de verdade com portões neon, seta e GPS; vitórias dão reputação, dinheiro,
+  pinturas novas e níveis de nitro. Ranking com 8 rivais e o chefão @rei.da.orla.
+- **Missões:** entregas com tempo, táxi, corridas (com medalhas e recorde), regata de lancha, pedidos de foto
+  pelo app Sinal e 24 conchas neon escondidas. Dinheiro e seguidores como recompensa.
+- **Celular do jogo:** missões, mapa, rádio, clima/horário, feed Sinal, progresso, ajustes e ajuda.
+- **Rádio original** feito com WebAudio: Sinal 2088 (synthwave), Torre Industrial e Névoa FM.
+- Minimapa giratório, mapa completo com GPS, qualidade gráfica baixa/média/alta com detecção automática,
+  progresso salvo no aparelho e instalação como app (PWA).
+
+- **Gravar gameplay:** botão 🔴 (ou V, ou app no celular do jogo) grava a tela com o som do jogo. Depois dá para
+  assistir, **salvar o vídeo**, **compartilhar** (no celular vai direto para WhatsApp, Instagram etc. quando o navegador deixa),
+  **mandar o link** do jogo ou mandar no **WhatsApp**. Grava em MP4 quando o navegador suporta (senão WebM), até **2 minutos** (para sozinho em 2:00; nos últimos 10 s aparece “acaba em Xs”).
+- **Carros tunados:** na **Oficina Neon** (Av. Holofote) escolha pintura, neon embaixo do carro, aerofólio, kit largo,
+  rodas, estilo de adesivo e o texto da lateral. Carro tunado ganha **nitro** com chama no escapamento e desfoque de velocidade.
+  Carros tunados também passeiam pela cidade, e há **rachas** contra 3 rivais tunados (Collins e Centro). Tudo sem batidas violentas.
+- **Instalar como app:** botão “Instalar na tela inicial” (Android/computador) ou instruções de “Adicionar à Tela de Início” no iPhone.
+  Funciona offline depois de instalado. No celular do jogo há o botão **Salvar progresso** (o jogo também salva sozinho).
+
+- **Modo Corrida (Autódromo Íon):** pista fechada nos Setor com muros, zebras, cones, arcos neon, arquibancada e largada com luzes.
+  4 carros de corrida originais (Lúmen GT-R, Trovão V8, Kaze RS, Aurora X1) com pinturas, nitro com chama azul e drift no freio
+  (contra-esterço segura o ângulo, fumaça e marcas de pneu, combo de drift). 1, 3 ou 5 voltas contra 3 rivais, checkpoints,
+  melhor volta salva no aparelho, tela de chegada com compartilhar. Acesso pelo menu inicial, pelo ícone 🏎️ no mapa ou pelo atalho 🏁.
+- **Loft Prisma:** seu loft no alto da torre (sul do Centro) com piscina e garagem com os seus carros (o tunado, o de corrida e a moto).
+  Na porta: trocar de visual, salvar o progresso e passar o tempo. Apresentação curta na 1ª visita.
+- **Circuito Plasma:** pista de drift de ~1,5 km a oeste e ao sul da Loft Prisma, com curvas fechadas, muros neon, rivais que derrapam
+  (Lila Curva, Leo Fumaça, Nina Lateral, Rafa Serpente) e pontuação de sessão (recorde em `nd-plasma-v1`). Entrada pela Av. do Centro
+  (atalho ⚡ ou tecla K) ou pelo painel da casa. Ao lado da curva leste fica o **Bar da Antena** (aberto das 16h às 2h), com mesas, moradores
+  na rotina da cidade e espectadores que vêm à tarde e à noite e vão embora de madrugada.
+- **Mochila a jato e helicóptero:** voe pela cidade com a mochila (chama e fumaça) ou chame o helicóptero, que chega voando e pousa perto.
+- **Veículo de cada personagem:** cada personagem tem o seu, com cores e letreiro próprios — Luna: esportivo rosa “LUNA”;
+  Davi: moto ciano “DAVI”; Teia Neon: moto verde-limão; Armadura Solar: hiper dourado nº 1; Colosso Verde: caminhonete;
+  Sentinela: muscle azul-marinho nº 5; Lorde Férreo: GT grafite nº 8; Titã Violeta: JDM roxo nº 9. Botão **🚘 Chamar veículo**
+  (tecla B): ele chega pela rua, estaciona numa faixa livre perto de você (nunca na água nem dentro de prédio).
+- **Nitro de cinco camadas:** segurando o nitro ele sobe de estágio (×1 a ×5), cada um mais forte, com chama maior; o HUD mostra 5 segmentos.
+- **Traje nano-metal:** todos os personagens jogáveis usam um traje metálico escuro com linhas de luz na cor do personagem.
+- **Moradores com voz:** falas em pt-BR gravadas com voz neural (vozes femininas e masculinas), com legenda; comentam seu carro,
+  o nitro, a mochila, ensinam caminhos e desafiam para corridas. Os personagens passeiam, olham para você e acenam.
+
+## Tecnologias
+
+HTML + JavaScript (módulos ES) + [Three.js](https://threejs.org/) r170 incluído em `vendor/three` (licença MIT).
+Geometria, texturas e música são geradas por código. Assets externos: avatares CC0 e vozes geradas offline (ver CREDITOS.md).
+
+Para rodar localmente: `python3 -m http.server 8765` nesta pasta e abra http://localhost:8765/
+(`?q=low|medium|high` força a qualidade).
+
+## Link
+
+https://eusoudaquintadimensao-creator.github.io/miami-beach-drive/
