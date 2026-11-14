@@ -1,5 +1,5 @@
 // Service worker do Neon Distrito: deixa o jogo instalável e jogável offline.
-const VERSION = 'neon-dist-v13-2026-11-14-vida';
+const VERSION = 'neon-dist-v14-2026-11-14-praia';
 const FAM = VERSION.replace(/v\d.*$/, ''); // só apaga caches antigos DESTE jogo (o domínio é dividido com outros apps/jogos)
 const CORE = [
   './', 'index.html', 'manifest.json', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-192.png', 'icon-maskable-512.png', 'apple-touch-icon.png',
