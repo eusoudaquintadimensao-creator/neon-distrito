@@ -116,3 +116,5 @@ Neon específico: bloom do Loft Prisma corrigido (vidro 0.04+night·0.42, piscin
   Fotos: screenshots/ponte-<d|i|il|al>-{overview,tandem,radio,hud}.png. SW neon-dist-v5-2026-11-13-ponte.
 - Resultado: test/ponte.js PASS em desk, iPhone 390×844, iPhone paisagem 844×390, Android paisagem 915×412 (baixa) e desk alta; 0 erros.
   Regressão mech/drive (d/i/il/al), serp e linecheck: PASS nos dois jogos. Draw calls na ponte (baixa) ~100–210, ~0,22–0,27 M triângulos.
+- Publicado 13/11 23:33 -03 (commit 3ae45f2) e verificado ao vivo 23:37–23:40 -03: cache neon-dist-v5-2026-11-13-ponte ativo, live-drive + live-ponte PASS desk e iPhone, 0 erros.
+  Fotos ao vivo: screenshots/live-ponte-{d,i}-{overview,tandem,radio,hud}.png. (Este registro é commit local; vai junto no próximo push.)
