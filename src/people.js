@@ -10,7 +10,7 @@ const SHIRT = [0x1a1a28, 0x0a0e18, 0x2a0a3a, 0x071820, 0xff2bd6, 0x29f0ff, 0x7d6
 const PANTS = [0x0b0b10, 0x1a1a22, 0x111118, 0x1c2430, 0x0a1018, 0x22222c, 0x15151c];
 const HAIR = [0x1a1110, 0x3b2314, 0x6a4e2a, 0xd8b26e, 0x111111, 0x8a3b12, 0xcccccc];
 const DOGC = [0x8a5a2b, 0x1d1d1d, 0xf2e6d0, 0xd8a24a, 0x6b6b6b];
-export const LINES_PT = ['Bom dia! ☀️', 'Que calor hoje, né?', 'Já viu o pôr do sol no píer?', 'Bora pra praia!', 'Esse carro é lindo!', 'Cuidado aí, motorista! 😅', 'Ei! Quase!', 'Ufa, essa foi perto!', 'Neon Distrito é demais 🌴', 'Vou postar essa vista!', 'Alguém viu meu chinelo?', 'Hoje tem festa na Ocean Drive!', 'Vai chover mais tarde…', 'Melhor açaí da cidade é aqui!'];
+export const LINES_PT = ['Bom dia! ☀️', 'Que calor hoje, né?', 'Já viu o pôr do sol no píer?', 'Bora pra praia!', 'Esse carro é lindo!', 'Cuidado aí, motorista! 😅', 'Ei! Quase!', 'Ufa, essa foi perto!', 'Neon Distrito é demais 🌴', 'Vou postar essa vista!', 'Alguém viu meu chinelo?', 'Hoje tem festa na Avenida Holofote!', 'Vai chover mais tarde…', 'Melhor açaí da cidade é aqui!'];
 
 function partGeos() {
   const leg = new THREE.CapsuleGeometry(0.085, 0.72, 2, 6); leg.translate(0, -0.44, 0);

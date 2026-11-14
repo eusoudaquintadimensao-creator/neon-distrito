@@ -104,7 +104,8 @@ export class Home {
   near() { const p = this.G.player; return !p.vehicle && Math.hypot(p.x - this.door.x, p.z - this.door.z) < 3.2; }
   update(dt, t, night, cam) {
     const d = Math.hypot(cam.position.x - HOME.x, cam.position.z - HOME.z); const vis = d < 700; this.g.visible = vis; if (!vis) return;
-    this.mats.glass.emissiveIntensity = 0.05 + night * 1.6; this.mats.pool.emissiveIntensity = 0.25 + night * 1.4; this.neon.color.setHex(0xff3fb4).multiplyScalar(0.6 + night * 2);
+    // brilho do Loft Prisma equilibrado (antes estourava o bloom à noite)
+    this.mats.glass.emissiveIntensity = 0.04 + night * 0.42; this.mats.pool.emissiveIntensity = 0.2 + night * 0.45; this.neon.color.setHex(0xff3fb4).multiplyScalar(0.55 + night * 0.6);
     this.ring.material.opacity = 0.45 + Math.sin(t * 3) * 0.25; this.icon.position.y = 2.9 + Math.sin(t * 2) * 0.12;
     const p = this.G.player; const dp = Math.hypot(p.x - HOME.x, p.z - HOME.z);
     if (dp < 240 && !this.carsT) { this.carsT = 1; this.spawnCars(); } else if (dp > 320) this.carsT = 0;

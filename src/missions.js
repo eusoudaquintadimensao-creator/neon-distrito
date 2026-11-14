@@ -7,21 +7,21 @@ import { GARAGE } from './garage.js';
 import { HELIPAD } from './heli.js';
 
 export const POIS = [
-  { name: 'Café Brisa (Ocean Drive)', x: 291, z: 120 }, { name: 'Hotel Coral', x: 189, z: -375 }, { name: 'Sorveteria Paraíso', x: 69, z: 75 },
+  { name: 'Café Brisa (Av. Holofote)', x: 291, z: 120 }, { name: 'Hotel Coral', x: 189, z: -375 }, { name: 'Sorveteria Paraíso', x: 69, z: 75 },
   { name: 'Lavanderia Maré', x: 171, z: 520 }, { name: 'Galeria Neon', x: 51, z: -230 }, { name: 'Portaria da Torre Aurora', x: -429, z: 40 },
   { name: 'Balcão da Marina', x: -291, z: -20 }, { name: 'Mercado do Centro', x: -531, z: -380 }, { name: 'Loja de Surf Onda', x: 309, z: -520 },
   { name: 'Cabana dos Setor', x: -700, z: 12 }, { name: 'Portão do Farol', x: 200, z: 609 }, { name: 'Escola de Vela', x: -291, z: 330 },
   { name: 'Floricultura Hibisco', x: -651, z: 230 }, { name: 'Academia do Núcleo', x: 309, z: 380 }, { name: 'Estúdio de Dança Salsa', x: 69, z: -500 },
 ];
 export const RACES = [
-  { id: 'r1', name: 'Circuito Ocean Drive', start: [300, 165, 0], pts: [[300, 300], [300, 450], [300, 600], [180, 600], [60, 600], [60, 450], [60, 300], [180, 300], [180, 150], [300, 150], [300, 175]], medals: [62, 75, 92] },
+  { id: 'r1', name: 'Circuito Holofote', start: [300, 165, 0], pts: [[300, 300], [300, 450], [300, 600], [180, 600], [60, 600], [60, 450], [60, 300], [180, 300], [180, 150], [300, 150], [300, 175]], medals: [62, 75, 92] },
   { id: 'r2', name: 'Travessia das Pontes', start: [60, 410, 0], pts: [[60, 450], [-120, 450], [-300, 450], [-300, 300], [-300, 150], [-300, 0], [-300, -150], [-300, -300], [-300, -450], [-120, -450], [60, -450], [60, -300]], medals: [88, 105, 125] },
   { id: 'r3', name: 'Rali dos Setor', start: [-680, 0, -Math.PI / 2], pts: [[-860, 0], [-860, -380], [-860, 0], [-1040, 0], [-860, 0], [-860, 380], [-860, 0], [-700, 0]], medals: [80, 95, 115] },
   { id: 'b1', name: 'Regata da Baía', boat: true, start: [-205, -50, Math.PI / 2], pts: [[-120, -150], [-60, -380], [-20, 0], [-60, 380], [-150, 250], [-140, 60], [-150, -30]], medals: [70, 85, 100] },
 ];
 const SHELLS = [[340, -580], [360, -300], [372, 40], [345, 300], [366, 560], [100, -640], [250, 650], [-120, 446], [-120, -446], [-275, -100], [-230, 100], [-350, -60],
   [-560, -660], [-640, 660], [-700, 35], [-940, -150], [-860, 300], [-1040, -10], [535, -299], [450, -299], [120, -10], [240, 240], [-480, -300], [-600, 520]];
-const PASS_LINES = ['Pode ir com calma, tô curtindo a vista! 🌴', 'Essa cidade fica linda com esse neon!', 'Toca uma música boa aí no rádio?', 'Vou postar que o motorista é top ⭐', 'Já foi no píer da praia no fim da tarde?', 'Hoje o mar tá lindo, né?', 'Adoro esses prédios coloridos da Ocean Drive!'];
+const PASS_LINES = ['Pode ir com calma, tô curtindo a vista! 🌴', 'Essa cidade fica linda com esse neon!', 'Toca uma música boa aí no rádio?', 'Vou postar que o motorista é top ⭐', 'Já foi no píer da praia no fim da tarde?', 'Hoje o mar tá lindo, né?', 'Adoro esses prédios coloridos da Avenida Holofote!'];
 const FANS = ['@sol.da.manha', '@vibe_tropical', '@neon.lover', '@praia_e_paz', '@ana.viaja', '@lucas.surf', '@mari.fotos', '@rafa_rolê'];
 
 function iconTex(emoji, ring) {
