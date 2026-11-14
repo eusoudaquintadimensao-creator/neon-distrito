@@ -64,3 +64,13 @@ Para publicar SÓ após aprovação: git push origin main.
 Neon específico: bloom do Loft Prisma corrigido (vidro 0.04+night·0.42, piscina 0.2+night·0.45, neon ×(0.55+night·0.6));
   falas de NPC que diziam "Solara"/"Ocean Drive" corrigidas (Avenida Holofote, "do Distrito"…) — 54 áudios antigos removidos,
   66 novos gerados com Kokoro (22 falas × f/m/s), assets/voz/index.json atualizado.
+
+### Publicado t328 (13/11 21:09 -03) e correções t329 (21:12–21:30 -03)
+- t328 publicado após aprovação (pt329u) e verificado ao vivo: SW neon-dist-v2-2026-11-13-dirigir, 0 erros desk+iPhone, tela CONTROLES ok.
+- t329 (regra: toda publicação leva as correções achadas), iPhone em pé:
+  1. CONTROLES: overlay rolável e centrado com segurança (align flex-start + margin:auto), cards compactos no celular (sem min-height 200),
+     cabe sem rolar em 390×844, 844×390 e 375×667; título e Pronto sempre visíveis.
+  2. Dica de direção ("Segure a esquerda…") vai para a faixa de cima (entre minimapa e relógio) e some sozinha após 4,5 s; não cobre o Freio.
+  3. Avisos (#toast) e notificações (#note) ao dirigir ficam na faixa de cima (retrato abaixo dos ícones; paisagem no topo), centro livre.
+- SW neon-dist-v3-2026-11-13-retrato. test/drive.js ganhou checagens t329 (título/Pronto, dica aparece/some/não cobre botões, avisos fora do centro e sem cobrir HUD).
+  PASS desk 1280×720, iPhone 390×844, iPhone paisagem 844×390, Android paisagem 915×412 — 0 erros.
