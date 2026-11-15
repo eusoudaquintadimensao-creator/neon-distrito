@@ -856,3 +856,67 @@ body.driving.touch #btns button:not(#bNeutral){width:46px!important;height:46px!
 body.touch #topBar #qCar{display:none!important} /* 🚘 Chamar já está no botão grande (sem duplicado) */
 body.touch.land:not(.driving) #note{top:calc(var(--sat) + 58px)!important;left:calc(var(--sal) + 132px)!important;width:min(270px,36vw)!important;font-size:12px!important;padding:7px 10px!important}
 body.touch:not(.land):not(.driving) #note{top:calc(var(--sat) + 146px)!important;left:calc(var(--sal) + 10px)!important;right:auto!important;width:calc(100vw - 20px - var(--sal) - var(--sar))!important;max-width:380px;font-size:12px!important;padding:7px 10px!important}
+/* t408/t410: lojas da orla — cartão, catálogo (vidro claro) e reações do espelho */
+#lojaCard{position:absolute;left:50%;top:calc(var(--sat) + 64px);transform:translateX(-50%);pointer-events:auto;background:rgba(255,255,255,.18);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1.5px solid rgba(255,255,255,.92);border-radius:14px;padding:8px 12px;color:#fff;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,.85);font-size:14px;z-index:6}
+#lojaCard[hidden]{display:none}
+#lojaCard .stAsk{display:flex;gap:8px;justify-content:center;margin-top:6px}
+#lojaCard button{min-height:40px;min-width:118px;border-radius:12px;border:1.5px solid rgba(255,255,255,.92);font-weight:800;font-size:14px;color:#fff;background:rgba(255,255,255,.14);text-shadow:0 1px 3px rgba(0,0,0,.85)}
+#lojaCard button.hot{background:linear-gradient(90deg,rgba(255,127,168,.75),rgba(255,209,102,.7))}
+#lojaPanel{position:fixed;right:10px;top:calc(var(--sat,0px) + 10px);bottom:calc(var(--sab,0px) + 10px);width:min(390px,46vw);z-index:40;display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:18px;background:rgba(20,16,30,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1.5px solid rgba(255,255,255,.85);color:#fff;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+#lojaPanel[hidden]{display:none}
+#lojaPanel .lojaHead{display:flex;align-items:center;justify-content:space-between;font-size:17px}
+#lojaPanel .lojaX{width:40px;height:40px;border-radius:12px;border:1.5px solid rgba(255,255,255,.9);background:rgba(255,255,255,.14);color:#fff;font-size:18px}
+#lojaPanel .lojaSub{font-size:13px;opacity:.95}#lojaPanel .lojaMoney{color:#7dffb0;font-weight:800}
+#lojaPanel .lojaTabs{display:flex;gap:5px;overflow-x:auto;touch-action:pan-x;flex:none}
+#lojaPanel .lojaTab{flex:1 0 auto;min-width:52px;min-height:46px;border-radius:12px;border:1.5px solid rgba(255,255,255,.6);background:rgba(255,255,255,.1);color:#fff;font-size:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2px 6px}
+#lojaPanel .lojaTab small,#lojaPanel .lojaPoses small{font-size:10px;font-weight:700}
+#lojaPanel .lojaTab.on{background:linear-gradient(135deg,rgba(255,127,168,.7),rgba(41,240,255,.45));border-color:#fff}
+#lojaPanel .lojaList{flex:1;overflow-y:auto;touch-action:pan-y;display:flex;flex-direction:column;gap:6px;min-height:60px}
+#lojaPanel .lojaItem{display:flex;align-items:center;gap:8px;padding:6px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18)}
+#lojaPanel .lojaItem.on{border-color:#7dffb0;background:rgba(125,255,176,.12)}
+#lojaPanel .sw{flex:none;width:34px;height:34px;border-radius:10px;border:1.5px solid rgba(255,255,255,.9);box-shadow:inset 0 0 8px rgba(0,0,0,.25)}
+#lojaPanel .lojaTxt{flex:1;display:flex;flex-direction:column;line-height:1.2}#lojaPanel .lojaTxt small{opacity:.8;font-size:11px}
+#lojaPanel .lojaBtn{flex:none;min-width:84px;min-height:38px;border-radius:11px;border:1.5px solid rgba(255,255,255,.9);background:rgba(255,255,255,.14);color:#fff;font-weight:800;font-size:13px}
+#lojaPanel .lojaBtn.buy{background:linear-gradient(90deg,rgba(255,127,168,.8),rgba(255,177,74,.75))}#lojaPanel .lojaBtn.off{opacity:.55}#lojaPanel .lojaBtn.on{background:rgba(125,255,176,.3)}
+#lojaPanel .lojaPoses{display:flex;gap:5px;flex:none}
+#lojaPanel .lojaPoses button{flex:1;min-height:46px;border-radius:12px;border:1.5px solid rgba(255,255,255,.85);background:rgba(255,255,255,.12);color:#fff;font-size:18px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#lojaPanel .lojaNote{margin:0;font-size:11px;opacity:.8}
+body.lojaOpen #topBar,body.lojaOpen #btns,body.lojaOpen #stick,body.lojaOpen #lojaCard,body.lojaOpen #note,body.lojaOpen #toast{display:none!important}
+@media (orientation:portrait){#lojaPanel{left:8px;right:8px;width:auto;top:auto;height:56vh}}
+#lojaReact{position:fixed;left:12px;top:calc(var(--sat,0px) + 70px);z-index:41;pointer-events:none;color:#fff;font-weight:900;font-size:20px;text-shadow:0 2px 6px rgba(0,0,0,.8);background:rgba(255,255,255,.16);border:1.5px solid rgba(255,255,255,.9);backdrop-filter:blur(8px);border-radius:16px;padding:8px 14px}
+#lojaReact[hidden]{display:none}#lojaReact i{font-style:normal;margin-left:8px}
+#lojaReact.pop{animation:lojaPop .5s ease-out}
+@keyframes lojaPop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+@media (orientation:portrait){#lojaReact{top:calc(var(--sat,0px) + 60px);left:50%;transform:translateX(-50%)}#lojaReact.pop{animation:none}}
+/* t413/t414/t417: coluna da borda (⏸ ↩), botão 👁 tela limpa, extras somem dirigindo, Freio no alto com Alto + Ré embaixo */
+#edgeCol{position:absolute;display:flex;flex-direction:column;gap:6px;z-index:7;pointer-events:auto}
+#edgeCol button,#bClean{width:40px;height:40px;border-radius:12px;font-size:17px;color:#fff;cursor:pointer;background:linear-gradient(160deg,rgba(255,255,255,.34),rgba(255,255,255,.10))!important;border:1.5px solid rgba(255,255,255,.92)!important;text-shadow:0 0 2px #000,0 1px 3px rgba(0,0,0,.9);box-shadow:0 2px 8px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.55)!important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding:0}
+#edgeCol button[hidden]{display:none!important}
+#bClean{position:absolute;width:32px;height:32px;border-radius:10px;font-size:15px;z-index:8;pointer-events:auto}
+body.touch #edgeCol button{width:38px;height:38px}
+body.touch.land #edgeCol button{width:34px;height:34px;font-size:15px}
+body.touch.land #edgeCol{gap:5px}
+/* tela limpa: só o essencial (dirigir: volante/acelerar/Freio/Ré/nitro/N; a pé: joystick, pular, ação) */
+body.clean #topBar,body.clean #note,body.clean #fol,body.clean #area,body.clean #radio,body.clean #giftHud,body.clean #bPhoto,body.clean #bHorn,body.clean #drvBeam,body.clean #drvCruise,body.clean #drvGear,body.clean #adCard,body.clean #spd{display:none!important}
+/* dirigindo rápido sem tocar: extras ficam quase transparentes (voltam no toque ou ao parar) */
+#topBar,#note,#fol,#area,#radio,#giftHud,#drvCruise,#drvGear,#drvBeam{transition:opacity .45s}
+body.autofade #topBar,body.autofade #note,body.autofade #fol,body.autofade #area,body.autofade #radio,body.autofade #giftHud,body.autofade #drvBeam{opacity:.12!important}
+body.autofade #drvCruise,body.autofade #drvGear{opacity:.35!important}
+/* t414: Freio mais alto; Alto e Ré embaixo, perto da borda (acima da barra de gestos) */
+body.driving.touch .drvRight{grid-template-columns:54px 64px!important;grid-template-areas:". act" ". brake" "beam rev"!important;align-items:center!important}
+body.driving.touch .drvRight #drvRev{width:58px!important;height:58px!important}
+body.driving.touch .drvRight #drvBeam{width:46px!important;height:46px!important}
+body.driving.touch.land .drvRight{grid-template-columns:50px 60px!important;gap:6px!important}
+body.driving.touch.land .drvRight #drvBrake{width:60px!important;height:60px!important}
+body.driving.touch.land .drvRight #drvRev{width:52px!important;height:52px!important}
+body.driving.touch.land .drvRight #bAct{width:42px!important;height:42px!important}
+body.driving.touch.land .drvRight #drvBeam{width:44px!important;height:44px!important}
+/* mensagens dirigindo: faixa do topo (a guarda src/msgguard.js ainda empurra o que cruzar o carro/estrada) */
+body.driving:not(.touch) #toast{top:calc(var(--sat) + 60px)}
+body.driving:not(.touch) #big{top:9%}
+body.driving #toast div{max-width:100%}
+body.touch.driving:not(.land) #toast{right:calc(var(--sar) + 58px)}
+#bNeutral.deskN{position:absolute;left:calc(var(--sal) + 252px);bottom:calc(var(--sab) + 18px);width:46px;height:46px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;font-size:18px;font-weight:900;color:#fff;cursor:pointer;z-index:7;background:linear-gradient(160deg,rgba(255,255,255,.34),rgba(255,255,255,.10));border:1.5px solid rgba(255,255,255,.92);text-shadow:0 0 2px #000,0 1px 3px rgba(0,0,0,.9);box-shadow:0 2px 8px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#bNeutral.deskN small{font-size:8px;font-weight:800}
+#bNeutral.deskN.on{background:rgba(255,79,184,.55)}
+#bNeutral.deskN[hidden]{display:none}
