@@ -58,6 +58,7 @@ import { Street } from './street.js';
 import { DriveUI, respawnFade } from './driveui.js';
 import { setupTopBar } from './topbar.js';
 import { setupMsgGuard } from './msgguard.js';
+import { flyCam } from './flyover.js';
 
 const SAVE_KEY = 'nd-save-v1';
 const $ = (id) => document.getElementById(id);
@@ -103,7 +104,8 @@ $('qsel').onchange = (e) => { save.quality = e.target.value; persist(); location
 
 // ---------------- renderizador
 const canvas = $('c');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: false });
+const BOOT = window.__boot || null; // t428: o sobrevoo de abertura já criou o renderizador (mesmo contexto WebGL, sem tela preta)
+const renderer = (BOOT && BOOT.renderer) || new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: false });
 let pr = Math.min(devicePixelRatio || 1, Q.prMax); renderer.setPixelRatio(pr);
 renderer.setSize(innerWidth, innerHeight, false);
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.6;
@@ -161,19 +163,22 @@ G.addMoney = (n) => { save.money += n; G.ui.stats(save.money, save.followers); }
 G.addFollowers = (n) => { save.followers += n; G.ui.stats(save.money, save.followers); };
 
 async function boot() {
-  const status = (t) => { $('play').textContent = t; };
-  status('Construindo a cidade…'); await nextFrame();
-  G.renderer = renderer; G.world = buildWorld(scene, Q); G.palms = new PalmBreak(G, scene, G.world); G.helipad = buildHelipad(scene, Q); G.breaks = new Breakables(G, scene, G.world); G.track = new Track(scene, Q); G.Q = G.Q || Q; G.home = new Home(G);
-  G.life = buildLife(G); G.birds = new Birds(G); G.gifts = new Gifts(G);
-  status('Acendendo o neon…'); await nextFrame();
-  G.env = createEnv(scene, renderer, Q); G.env.setTime(save.hour); G.env.weather = save.weather; G.env.cloud = save.weather === 'chuva' ? 0.85 : 0.25; G.env.rain = save.weather === 'chuva' ? 1 : 0;
-  setupComposer();
+  // t428: etapas reais do boot alimentam a barra (62–100%); o rótulo aparece sob a barra
+  const STG = { world: [8, 'plantando as palmeiras'], 'home/life/birds/gifts': [22, 'acendendo as luzes da baía'], createEnv: [30, 'ajustando a luz de cinema'], composer: [34, 'chamando os moradores'], 'wardrobe/hero': [40, 'abastecendo os carros'], traffic: [48, 'preparando lanchas e helicópteros'], 'fleet/heli/plane': [56, 'afinando o rádio'], 'audio/ui': [62, 'montando a ponte e as pistas'], 'jet/voice/street/serp/ponte': [72, 'abrindo as lojas da orla'], 'beach/bail/orla': [82, 'desenhando o mapa'], 'gps/map/drive': [88, 'últimos retoques'], warm: [92, 'últimos retoques'], compile: [100, 'pronto'] }; // rótulo = o que vem a seguir
+  const status = (t) => { if (!BOOT) $('play').textContent = t; };
+  const BT = G.bootT = []; let bt0 = performance.now(); const mark = (n) => { const t = performance.now(); BT.push([n, Math.round(t - bt0)]); bt0 = t; const st = STG[n]; if (BOOT && st) BOOT.stage(st[0], st[1]); };
+  status('Construindo a cidade…'); if (BOOT) BOOT.stage(0, 'erguendo os prédios'); await nextFrame();
+  G.renderer = renderer; G.world = buildWorld(scene, Q); mark('world'); G.palms = new PalmBreak(G, scene, G.world); G.helipad = buildHelipad(scene, Q); G.breaks = new Breakables(G, scene, G.world); G.track = new Track(scene, Q); mark('palms/heli/breaks/track'); G.Q = G.Q || Q; G.home = new Home(G);
+  G.life = buildLife(G); G.birds = new Birds(G); G.gifts = new Gifts(G); mark('home/life/birds/gifts');
+  status('Acendendo o neon…'); await nextFrame(); mark('frame2');
+  G.env = createEnv(scene, renderer, Q); mark('createEnv'); G.env.setTime(save.hour); G.env.weather = save.weather; G.env.cloud = save.weather === 'chuva' ? 0.85 : 0.25; G.env.rain = save.weather === 'chuva' ? 1 : 0;
+  mark('env'); setupComposer(); mark('composer');
   status('Chamando os moradores…'); await nextFrame();
   G.wardrobe = new Wardrobe(G); setLookSource((id) => G.wardrobe.look(id)); // roupas e trajes salvos por personagem (t408/t410)
-  G.hero = new Avatar(scene, Q, save.avatar || 'ela');
-  G.crowd = new Crowd(scene, Q, Q.peds);
+  G.hero = new Avatar(scene, Q, save.avatar || 'ela'); mark('wardrobe/hero');
+  G.crowd = new Crowd(scene, Q, Q.peds); mark('crowd');
   G.traffic = new Traffic(scene, Q, Q.traffic);
-  for (const c of G.traffic.cars) if (c.type === 'moto') addRider(c);
+  for (const c of G.traffic.cars) if (c.type === 'moto') addRider(c); mark('traffic');
   G.vehicles = [];
   SPAWNS.parked.forEach((s, k) => {
     const mine = k === 0 && save.tune && SPECS[save.tune.type];
@@ -181,18 +186,18 @@ async function boot() {
   });
   for (const s of SPAWNS.taxiStands) { const v = new Vehicle('taxi', scene, Q); v.place(s.x, s.z, s.h); v.parked = true; G.vehicles.push(v); }
   for (const s of SPAWNS.boats) { const v = new Vehicle('boat', scene, Q); v.place(s.x, s.z, s.h); v.parked = true; G.vehicles.push(v); }
-  G.fleet = new Fleet(G, SPECS); // t391: 3 lanchas de luxo, 1 iate e 3 jet skis
+  mark('vehicles'); G.fleet = new Fleet(G, SPECS); // t391: 3 lanchas de luxo, 1 iate e 3 jet skis
   G.heli = new Heli(scene, Q, { color: 0xff2d55, stripe: 0xffffff }); G.heli.place(HELIPAD.x, HELIPAD.z, -Math.PI / 2); G.vehicles.push(G.heli);
   G.seabase = buildSeaplaneBase(scene, Q); G.plane = new Plane(scene, Q, { color: 0x1f2433, stripe: 0x29f0ff, accent: 0xb45cff }); G.plane.place(SEAPLANE_BASE.x, SEAPLANE_BASE.z, SEAPLANE_BASE.h); G.vehicles.push(G.plane);
-  G.helis = new HeliFleet(G, Q.helis);
+  G.helis = new HeliFleet(G, Q.helis); mark('fleet/heli/plane');
   G.audio = new AudioSys(); G.audio.muted = !!save.muted; G.audio.station = save.station || 0;
-  G.ui = new UI(G);
+  G.ui = new UI(G); mark('audio/ui');
   G.rivals = new Rivals(G);
   G.missions = new Missions(G);
   G.garage = new Garage(G);
-  G.talk = new Talk(G); G.powers = new Powers(G);
-  G.fx = new DriftFX(scene, Q, renderer); G.drift = new DriftScore(G); G.race = new Race(G, G.track);
-  G.jet = new Jetpack(G); G.voice = new Voices(G); G.street = new Street(G); G.serp = new Plasma(G); G.ponte = new SeaBridge(G); G.ponte.fun = new BridgeFun(G, G.ponte); G.ilhas = new Islands(G, G.ponte); G.boatRace = new BoatRace(G); G.mar = new SeaRaces(G); G.ads = new Outdoor(G, scene, Q); G.gauchos = new Gauchos(G); G.mega = new MegaGarage(G); G.boutique = new Boutique(G); G.paint = new PaintShop(G); G.beach = new BeachLife(G, scene, Q); G.bail = new Bailout(G, scene); G.orla = new Orla(G, scene, Q); G.gps = new OsmGps(G, { theme: 'night', inspired: { 'Orla de Vidro': 'South Beach', 'Canal Lúmen': 'Miami Beach', 'Ponta Violeta': 'South Beach', 'Baía de Plasma': 'Venetian Islands', 'Núcleo Central': 'Downtown Miami', 'Setor': 'Little Havana', 'Autódromo Íon': 'Hialeah', 'Circuito Plasma': 'Coconut Grove' } }); G.ui.refreshMap(); G.drive = DriveUI.setup(G);
+  G.talk = new Talk(G); G.powers = new Powers(G); mark('rivals/missions/garage/talk');
+  G.fx = new DriftFX(scene, Q, renderer); G.drift = new DriftScore(G); G.race = new Race(G, G.track); mark('fx/race');
+  G.jet = new Jetpack(G); G.voice = new Voices(G); G.street = new Street(G); G.serp = new Plasma(G); G.ponte = new SeaBridge(G); mark('jet/voice/street/serp/ponte'); G.ponte.fun = new BridgeFun(G, G.ponte); G.ilhas = new Islands(G, G.ponte); mark('bridgefun/ilhas'); G.boatRace = new BoatRace(G); G.mar = new SeaRaces(G); mark('boatRace/mar'); G.ads = new Outdoor(G, scene, Q); mark('ads'); G.gauchos = new Gauchos(G); G.mega = new MegaGarage(G); G.boutique = new Boutique(G); G.paint = new PaintShop(G); mark('gauchos/mega/boutique/paint'); G.beach = new BeachLife(G, scene, Q); G.bail = new Bailout(G, scene); G.orla = new Orla(G, scene, Q); mark('beach/bail/orla'); G.gps = new OsmGps(G, { theme: 'night', inspired: { 'Orla de Vidro': 'South Beach', 'Canal Lúmen': 'Miami Beach', 'Ponta Violeta': 'South Beach', 'Baía de Plasma': 'Venetian Islands', 'Núcleo Central': 'Downtown Miami', 'Setor': 'Little Havana', 'Autódromo Íon': 'Hialeah', 'Circuito Plasma': 'Coconut Grove' } }); G.ui.refreshMap(); G.drive = DriveUI.setup(G); mark('gps/map/drive');
   G.rec = new Recorder(G, canvas, { touch, onState: (on) => { G.recording = on; setPR(on ? Math.max(pr, 0.9) : pr); } });
   G.makeNPCModel = () => Hero.random(scene, Q);
   G.feed = [['@nexo.oficial', 'Bem-vindo(a) a Neon Distrito! Explore, trabalhe e poste as melhores vistas 🌴', 'agora'], ...[
@@ -205,9 +210,10 @@ async function boot() {
   G.ui.stats(save.money, save.followers);
   // pré-aquecimento
   G.env.update(0.016, 0, camera.position); G.env.updateEnv();
-  updateCamera(0.016, true);
-  renderer.compile(scene, camera);
-  $('play').disabled = false; status('▶  JOGAR'); $('raceBtn').disabled = false;
+  updateCamera(0.016, true); mark('warm');
+  renderer.compile(scene, camera); mark('compile');
+  $('play').disabled = false; $('play').textContent = '▶  JOGAR'; $('raceBtn').disabled = false;
+  if (BOOT && BOOT.handoff) { G.flyT = BOOT.t; BOOT.handoff(); } else document.body.classList.add('ldDone', 'menuIn');
   G.ready = true; window.MBD_READY = true; G.loadMs = Math.round(performance.now());
   // depois de pronto: personagens que conversam (modelo 3D carregado sob demanda)
   const idle = window.requestIdleCallback || ((f) => setTimeout(f, 200));
@@ -863,7 +869,7 @@ function loop(now) {
   else if (G.started && G.homeIntro) { G.t += dt; G.home.frame(dt, camera); G.env.update(dt * 0.3, G.t, camera.position); G.world.setNight(G.env.night, G.env.wet); updateAllLights(); G.world.update(G.t, dt); G.home.update(dt, G.t, G.env.night, camera); for (const c of G.home.cars) if (c && c.v) c.v.sync(0); }
   else if (G.started && G.garageOpen) { G.t += dt; G.garage.frame(dt, camera); G.env.update(dt * 0.3, G.t, camera.position); G.world.setNight(G.env.night, G.env.wet); updateAllLights(); G.world.update(G.t, dt); const gv = G.player.vehicle; if (gv) gv.sync(0); }
   else if (G.started && G.paused) { /* pausado: redesenha devagar */ if ((G._pz = (G._pz || 0) + dt) < 0.25) { realLast = now; fpsN = 0; fpsAcc = 0; return; } G._pz = 0; }
-  else { G.t += dt; G.env.update(dt * 0.2, G.t, camera.position); const a = G.t * 0.05; camera.position.set(320 + Math.cos(a) * 40, 22, -150 + Math.sin(a) * 60); camera.lookAt(260, 10, -150); G.world.setNight(G.env.night, G.env.wet); G.world.update(G.t, dt); }
+  else { G.t += dt; G.env.update(dt * 0.2, G.t, camera.position); G.flyT = (G.flyT || 0) + dt; flyCam(G.flyT, camera); /* t428: o mesmo sobrevoo da abertura continua atrás do menu */ G.world.setNight(G.env.night, G.env.wet); G.world.update(G.t, dt); }
   render();
   fpsAcc += (now - realLast) / 1000; realLast = now; fpsN++; if (fpsAcc >= 1) { fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; fpsHist.push(fps); if (fpsHist.length > 30) fpsHist.shift(); if (G.showFps) $('fps').textContent = `${fps.toFixed(0)} fps · ${Q.level} · ${pr.toFixed(2)}x · ${renderer.info.render.calls} draws`; else $('fps').textContent = ''; if (G.started && !G.paused) adapt(); }
 }
@@ -1003,6 +1009,7 @@ $('play').onclick = () => {
   if (!save.done) setTimeout(() => G.ui.phoneNote('@nexo.oficial', 'Dica: siga os ícones no mapa — 📦 entregas, 🏁 corridas, 📸 fotos e 🚕 táxi. Ninguém se machuca aqui!'), 2500);
   last = performance.now();
 };
+{ const cb = $('ctlBtn'), ch = $('ctlHelp'); if (cb && ch) cb.onclick = () => { ch.hidden = !ch.hidden; cb.setAttribute('aria-expanded', String(!ch.hidden)); }; } // t426: comandos recolhidos no botão Controles
 $('raceBtn').onclick = () => { $('play').onclick(); G.race.openMenu(); };
 // atalhos rápidos
 $('qRace').onclick = () => { if (!G.started || G.paused) return; G.audio.init(); if (G.race.active) G.race.askQuit(); else G.race.openMenu(); };
