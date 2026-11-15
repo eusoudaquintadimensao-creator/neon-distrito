@@ -196,7 +196,7 @@ async function boot() {
   G.feed = [['@nexo.oficial', 'Bem-vindo(a) a Neon Distrito! Explore, trabalhe e poste as melhores vistas 🌴', 'agora'], ...[
     ['@sol.da.manha', 'O pôr do sol do Píer da Praia hoje 🌅🔥', '2 min'], ['@neon.lover', 'Avenida Holofote de noite é outro planeta 💜💙', '8 min'],
     ['@praia_e_paz', 'Alguém viu o golfinho perto da marina?? 🐬', '15 min'], ['@ana.viaja', 'Roda-gigante da Baía: vale cada minuto 🎡', '34 min'],
-    ['@mari.fotos', 'Dica: a Torre Aurora fica linda refletida na baía 📸', '1 h'], ['@rafa_rolê', 'Fui nos Setor e vi garças lindas 🪶', '2 h']]];
+    ['@mari.fotos', 'Dica: a Torre Aurora fica linda refletida na baía 📸', '1 h'], ['@rafa_rolê', 'Fui no Setor Industrial e vi garças lindas 🪶', '2 h']]];
   // posição salva
   if (save.pos && walkable(save.pos.x, save.pos.z)) { G.player.x = save.pos.x; G.player.z = save.pos.z; G.player.h = save.pos.h; }
   G.player.y = surfaceY(G.player.x, G.player.z); G.camYaw = G.player.h;
@@ -535,7 +535,7 @@ function enterVehicle(v) {
   p.vehicle = v; v.driver = p; v.parked = false; v.vx = v.vz = v.vf = 0;
   seatHero(v);
   if (airToast(v)) { } else
-  G.ui.toast(`${v.spec.name}${v.type === 'taxi' ? ' · aperte <b>Iniciar</b> para pegar passageiros' : (touch ? ' · deslize para cima: nitro · para baixo: drift' : '')}`, 2400);
+  G.ui.toast(`${v.spec.name}${v.type === 'taxi' ? ' · aperte <b>Iniciar</b> para buscar passageiros' : (touch ? ' · deslize para cima: nitro · para baixo: drift' : '')}`, 2400);
   if (STATIONS[G.audio.station].bpm) G.ui.radio(STATIONS[G.audio.station]);
   G.camYaw = v.h;
 }
@@ -559,7 +559,7 @@ function action() {
   p.vehicle = v; v.driver = p; v.parked = false; v.vx = v.vz = v.vf = 0;
   seatHero(v);
   if (airToast(v)) { } else
-  G.ui.toast(`${v.spec.name}${v.type === 'taxi' ? ' · aperte <b>Iniciar</b> para pegar passageiros' : ''}`, 2400);
+  G.ui.toast(`${v.spec.name}${v.type === 'taxi' ? ' · aperte <b>Iniciar</b> para buscar passageiros' : ''}`, 2400);
   if (STATIONS[G.audio.station].bpm) G.ui.radio(STATIONS[G.audio.station]);
   G.camYaw = v.h;
 }

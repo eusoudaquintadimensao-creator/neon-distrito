@@ -8,7 +8,7 @@ const FEED = [
   ['@sol.da.manha', 'O pôr do sol do Píer da Praia hoje 🌅🔥', '2 min'], ['@neon.lover', 'Avenida Holofote de noite é outro planeta 💜💙', '8 min'],
   ['@praia_e_paz', 'Alguém viu o golfinho perto da marina?? 🐬', '15 min'], ['@lucas.surf', 'Mar com ondinhas boas pra iniciante hoje 🏄', '21 min'],
   ['@ana.viaja', 'Roda-gigante da Baía: vale cada minuto 🎡', '34 min'], ['@mari.fotos', 'Dica: a Torre Aurora fica linda refletida na baía 📸', '1 h'],
-  ['@rafa_rolê', 'Fui nos Setor e vi garças lindas 🪶', '2 h'], ['@vibe_tropical', 'Chuva de verão no Distrito: 15 min e passa ☔', '3 h'],
+  ['@rafa_rolê', 'Fui no Setor Industrial e vi garças lindas 🪶', '2 h'], ['@vibe_tropical', 'Chuva de verão no Distrito: 15 min e passa ☔', '3 h'],
 ];
 export class UI {
   constructor(G) {
