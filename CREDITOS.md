@@ -45,7 +45,7 @@ nome ou visual de personagens de terceiros.
   Nomes de lugares, rivais, rotas e da liga são originais. Sem marcas de terceiros.
 
 ## Circuito Plasma e Bar da Antena
-- Pista, rivais, bar, espectadores e nomes (Lila Curva, Leo Fumaça, Nina Lateral, Rafa Serpente, Bar da Antena, Circuito Plasma)
+- Pista, rivais, bar, espectadores e nomes (Lila Curva, Leo Fumaça, Nina Lateral, Rafa Faísca, Bar da Antena, Circuito Plasma)
   criados em código para este jogo. Nenhuma marca real de carro, de jogo ou de filme.
 
 ## Independência

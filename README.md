@@ -66,7 +66,7 @@ Abra o link do GitHub Pages no navegador (celular ou computador) e toque em **Jo
 - **Loft Prisma:** seu loft no alto da torre (sul do Centro) com piscina e garagem com os seus carros (o tunado, o de corrida e a moto).
   Na porta: trocar de visual, salvar o progresso e passar o tempo. Apresentação curta na 1ª visita.
 - **Circuito Plasma:** pista de drift de ~1,5 km a oeste e ao sul da Loft Prisma, com curvas fechadas, muros neon, rivais que derrapam
-  (Lila Curva, Leo Fumaça, Nina Lateral, Rafa Serpente) e pontuação de sessão (recorde em `nd-plasma-v1`). Entrada pela Av. do Centro
+  (Lila Curva, Leo Fumaça, Nina Lateral, Rafa Faísca) e pontuação de sessão (recorde em `nd-plasma-v1`). Entrada pela Av. do Centro
   (atalho ⚡ ou tecla K) ou pelo painel da casa. Ao lado da curva leste fica o **Bar da Antena** (aberto das 16h às 2h), com mesas, moradores
   na rotina da cidade e espectadores que vêm à tarde e à noite e vão embora de madrugada.
 - **Mochila a jato e helicóptero:** voe pela cidade com a mochila (chama e fumaça) ou chame o helicóptero, que chega voando e pousa perto.
