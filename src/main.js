@@ -59,13 +59,14 @@ import { Street } from './street.js';
 import { DriveUI, respawnFade } from './driveui.js';
 import { setupTopBar } from './topbar.js';
 import { setupMsgGuard } from './msgguard.js';
+import { setupEyes } from './eyes.js';
 import { flyCam } from './flyover.js';
 
 const SAVE_KEY = 'nd-save-v1';
 const $ = (id) => document.getElementById(id);
 const touch = DEVICE.touch;
 if (touch) document.body.classList.add('touch');
-initInstall({ toast: (t) => G.ui ? G.ui.toast(t, 4000) : null });
+initInstall({ toast: (t) => G.ui ? G.ui.toast(t, 4000) : null, onUpdate: () => { G.updReady = true; G.solaraNote && G.solaraNote('✨ Saiu uma versão nova do Neon Distrito! Seu progresso fica salvo.', { ms: 9000, btn: '🔄 Atualizar agora', onBtn: () => { try { G.persist && G.persist(); } catch (_) { } location.reload(); } }); } });
 const nextFrame = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
 
 // ---------------- progresso salvo
@@ -83,15 +84,15 @@ function detectQuality() {
   return 'medium';
 }
 const PRESETS = {
-  low: { level: 'low', prMin: 0.55, prMax: 1, shadows: false, shadowSize: 512, bloom: false, clouds: false, env: true, peds: 40, traffic: 10, fog: 0.0019, aniso: 2, expo: 1.05, msaa: 0, viewHide: 170, detail: 360, helis: 1, talkers: 4, animDist: 45 },
-  medium: { level: 'medium', prMin: 0.7, prMax: 1.5, shadows: true, shadowSize: 1024, bloom: true, clouds: true, env: true, peds: 84, traffic: 17, fog: 0.0013, aniso: 4, expo: 1, msaa: 2, viewHide: 220, detail: 620, helis: 2, talkers: 7, animDist: 70 },
-  high: { level: 'high', prMin: 0.9, prMax: 2, shadows: true, shadowSize: 2048, bloom: true, clouds: true, env: true, peds: 124, traffic: 24, fog: 0.0011, aniso: 8, expo: 1, msaa: 4, viewHide: 280, detail: 1e9, helis: 3, talkers: 9, animDist: 110 },
+  low: { level: 'low', prMin: 0.55, prMax: 1, shadows: false, shadowSize: 512, bloom: false, clouds: false, env: true, peds: 40, traffic: 10, fog: 0.0019, aniso: 2, expo: 1.05, msaa: 0, ao: false, smaa: false, viewHide: 170, detail: 360, helis: 1, talkers: 4, animDist: 45 },
+  medium: { level: 'medium', prMin: 0.7, prMax: 1.5, shadows: true, shadowSize: 1024, bloom: true, clouds: true, env: true, peds: 84, traffic: 17, fog: 0.0013, aniso: 4, expo: 1, msaa: 2, ao: false, smaa: true, viewHide: 220, detail: 620, helis: 2, talkers: 7, animDist: 70 },
+  high: { level: 'high', prMin: 0.9, prMax: 2, shadows: true, shadowSize: 2048, bloom: true, clouds: true, env: true, peds: 124, traffic: 24, fog: 0.0011, aniso: 8, expo: 1, msaa: 4, ao: true, smaa: true, viewHide: 280, detail: 1e9, helis: 3, talkers: 9, animDist: 110 },
 };
 // celular/tablet: menos pixels, sombras menores, menos gente e carros, menos distância de desenho
 function forDevice(P) {
   const q = Object.assign({}, P, { device: DEVICE.label });
   if (DEVICE.mobile) {
-    q.prMax = Math.min(q.prMax, q.level === 'low' ? 1 : DEVICE.ios ? 1.4 : 1.3); q.shadowSize = Math.min(q.shadowSize, 1024); q.msaa = 0;
+    q.prMax = Math.min(q.prMax, q.level === 'low' ? 1 : DEVICE.ios ? 1.4 : 1.3); q.shadowSize = Math.min(q.shadowSize, 1024); q.msaa = 0; q.ao = false; /* t435: oclusão de ambiente (GTAO) só no PC forte; celular usa SMAA barato no lugar do MSAA */
     q.peds = Math.round(q.peds * 0.75); q.traffic = Math.round(q.traffic * 0.8); q.viewHide = Math.min(q.viewHide, 200);
     q.detail = Math.min(q.detail, q.level === 'low' ? 320 : 480); q.helis = Math.min(q.helis, 2); q.talkers = Math.min(q.talkers, 6); q.animDist = Math.min(q.animDist, 55);
   }
@@ -115,7 +116,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure
 renderer.info.autoReset = false; renderer.shadowMap.enabled = Q.shadows; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.32, 6000); // t391: near maior = profundidade precisa (sem z-fighting/pisca no chão e na água) G.camera = camera;
-let composer = null, bloom = null, grade = null, zoomBlur = null;
+let composer = null, bloom = null, grade = null, zoomBlur = null; const FX = { ao: null, smaa: null, err: null };
 function setupComposer() {
   if (!Q.bloom) return;
   const rt = new THREE.WebGLRenderTarget(innerWidth * pr, innerHeight * pr, { type: THREE.HalfFloatType, samples: Q.msaa });
@@ -144,6 +145,24 @@ function setupComposer() {
         gl_FragColor = acc / w; }`,
   }); zoomBlur.enabled = false; composer.addPass(zoomBlur);
   composer.addPass(new OutputPass());
+  loadFx();
+}
+// t435: realismo extra carregado SOB DEMANDA (import dinâmico = não pesa no download inicial nem no modo leve)
+async function loadFx() {
+  try {
+    if (Q.ao && !G.lightened) {
+      const { GTAOPass } = await import('three/addons/postprocessing/GTAOPass.js');
+      const ao = new GTAOPass(scene, camera, innerWidth, innerHeight); ao.output = GTAOPass.OUTPUT.Default; ao.blendIntensity = 0.85;
+      ao.updateGtaoMaterial({ radius: 1.6, distanceExponent: 1.6, thickness: 2.5, scale: 1.0, samples: 12, distanceFallOff: 1.0, screenSpaceRadius: false });
+      ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 });
+      if (composer && !G.lightened) { composer.insertPass(ao, 1); FX.ao = ao; resize(); }
+    }
+    if (Q.smaa && !Q.msaa && !G.lightened) {
+      const { SMAAPass } = await import('three/addons/postprocessing/SMAAPass.js');
+      const sm = new SMAAPass(innerWidth * pr, innerHeight * pr);
+      if (composer && !G.lightened) { composer.insertPass(sm, composer.passes.length - 1); FX.smaa = sm; resize(); }
+    }
+  } catch (e) { FX.err = String(e && e.message || e); console.warn('fx', FX.err); }
 }
 
 // ---------------- jogo
@@ -194,7 +213,7 @@ async function boot() {
   G.heli = new Heli(scene, Q, { color: 0xff2d55, stripe: 0xffffff }); G.heli.place(HELIPAD.x, HELIPAD.z, -Math.PI / 2); G.vehicles.push(G.heli);
   G.seabase = buildSeaplaneBase(scene, Q); G.plane = new Plane(scene, Q, { color: 0x1f2433, stripe: 0x29f0ff, accent: 0xb45cff }); G.plane.place(SEAPLANE_BASE.x, SEAPLANE_BASE.z, SEAPLANE_BASE.h); G.vehicles.push(G.plane);
   G.helis = new HeliFleet(G, Q.helis); mark('fleet/heli/plane');
-  G.audio = new AudioSys(); G.audio.muted = !!save.muted; G.audio.station = save.station || 0;
+  G.audio = new AudioSys(); { const vv = parseFloat(localStorage.getItem('vol-v1')); if (vv >= 0 && vv <= 1) { G.audio.vol = vv || 0.8; if (vv === 0) save.muted = true; } } G.audio.muted = !!save.muted; G.audio.station = save.station || 0;
   G.ui = new UI(G); mark('audio/ui');
   G.rivals = new Rivals(G);
   G.missions = new Missions(G);
@@ -332,7 +351,7 @@ addEventListener('keydown', (e) => {
   if (e.code === 'Escape') { if (!$('bigmap').hidden) G.ui.closeMap(); else if (!$('photo').hidden) { $('photo').hidden = true; G.paused = false; } else if (G.phoneOpen) G.ui.closePhone(); else if (!document.pointerLockElement) G.openPause(); } // t400: Esc = pausa (celular continua no P)
   if (G.paused && !['KeyM', 'KeyP'].includes(e.code)) return;
   if (e.code === 'KeyE' || e.code === 'KeyF' && false) action();
-  if (e.code === 'KeyT') { if (G.race.active) G.race.resetCar(); else G.respawnOnRoad(); }
+  if (e.code === 'KeyT') G.unstuck(); // t439: T = 🔄 desvirar/destravar (corrida: último portão)
   if (e.code === 'KeyC' && !e.repeat) input.kick = true;
   if (e.code === 'KeyJ' && G.started && !G.paused) G.jet.toggle();
   if (e.code === 'KeyG' && G.started && !G.paused) G.callHeli();
@@ -433,6 +452,31 @@ function stuckCheck(dt) {
   if (stopT > 1 && (G.t - lastHitT < 8 || !onRoadNow(v.x, v.z) || dbl || (G.street && G.street.race))) respawnOnRoad(v);
 }
 G.respawnOnRoad = () => G.player.vehicle && respawnOnRoad(G.player.vehicle);
+// t439: 🔄 Desvirar/Destravar (menu do olho 2 e tecla T) — carro preso/capotado volta de pé num lugar válido; em corrida volta no último portão;
+// barco encalhado volta para a água; a pé preso numa quina vai para o chão livre mais perto. Nunca no ar.
+function freeSpot(x, z, rad, test) {
+  const q = new THREE.Vector3();
+  for (const r of [0, 3, 6, 10, 15, 22, 30, 42]) for (let k = 0; k < (r ? 16 : 1); k++) { const a = k / 16 * Math.PI * 2, sx = x + Math.sin(a) * r, sz = z + Math.cos(a) * r;
+    if (!test(sx, sz)) continue; q.set(sx, 0, sz); if (rad && collide(q, rad, false, 1)) continue; return [sx, sz]; }
+  return null;
+}
+G.unstuck = () => {
+  if (!G.started || G.paused) return false; const p = G.player, v = p.vehicle;
+  if (G.bail && G.bail.mode) { G.ui.toast('🪂 Espere pousar', 1400); return false; }
+  if (v && (v.spec.air || v.type === 'heli' || v.type === 'plane') && v.air) { G.ui.toast('✈️ No ar não precisa: pouse primeiro', 1600); return false; }
+  G.unstuckN = (G.unstuckN || 0) + 1;
+  const fix = (P, h, msg) => respawnFade(() => { if (v) { v.place(P[0], P[1], h); v.vx = v.vz = v.vf = 0; v.roll = v.pitch = 0; v.drifting = false; v.yawV = 0; v.hitT = 0; v.recover = 1; p.x = v.x; p.z = v.z; p.h = v.h; } else G.placeOnFoot(P[0], P[1], h); G.camYaw = h; G.snapCam && G.snapCam(); stopT = 0; G.ui.toast(msg, 1500); });
+  if (v) {
+    if (G.race && G.race.active) { G.race.resetCar(); return true; }
+    if (G.serp && G.serp.on) { G.serp.stuckT = 9; return true; }
+    if (G.ponte && G.ponte.on) { G.ponte.stuckT = 9; return true; }
+    if (v.spec.boat) { const P = freeSpot(v.x, v.z, 0, (x, z) => boatable(x, z)); if (!P) { G.ui.toast('🚤 Sem água livre por perto', 1600); return false; } fix(P, v.h, '🔄 De volta à água'); return true; }
+    if (!v.spec.air && respawnOnRoad(v)) return true; // racha de rua: último portão; fora: faixa da rua
+    const P = freeSpot(v.x, v.z, 2.6, (x, z) => walkable(x, z) && groundY(x, z) > -0.2); if (!P) { G.ui.toast('Sem espaço livre aqui 😕', 1600); return false; }
+    fix(P, v.h, '🔄 Carro desvirado'); return true;
+  }
+  const P = freeSpot(p.x, p.z, 0.5, (x, z) => walkable(x, z) && groundY(x, z) > -0.2); if (!P) return false; fix(P, p.h, '🔄 Destravado'); return true;
+};
 // t400: ⏸ Pausa (menu Continuar / Voltar ao modo anterior / Configurações / Controles) e ↩ Voltar direto
 function backInfo() {
   const p = G.player, v = p.vehicle;
@@ -451,14 +495,14 @@ G.backInfo = backInfo;
   const mk = (id, txt, title) => { const b = document.createElement('button'); b.id = id; b.textContent = txt; b.title = title; b.setAttribute('aria-label', title); return b; };
   const bP = mk('bPause', '⏸', 'Pausar (Esc)'), bB = mk('bBack', '↩', 'Voltar ao modo anterior'); bB.hidden = true; ic.prepend(bP, bB);
   const pm = document.createElement('div'); pm.id = 'pauseMenu'; pm.hidden = true;
-  pm.innerHTML = '<div class="pmBox"><b>⏸ Pausado</b><button data-k="go">▶ Continuar</button><button data-k="back" hidden></button><button data-k="cfg">⚙️ Configurações</button><button data-k="ctl">🎮 Controles</button></div>';
+  pm.innerHTML = '<div class="pmBox"><b>⏸ Pausado</b><button data-k="go">▶ Continuar</button><button data-k="back" hidden></button><button data-k="cfg">⚙️ Configurações</button><button data-k="ctl">🎮 Controles</button><button data-k="fs" hidden>⛶ Tela cheia</button></div>'; /* t437: tela cheia saiu do recado (2 s é pouco p/ tocar) e veio para a pausa */
   document.body.appendChild(pm);
-  G.openPause = () => { if (!G.started || G.phoneOpen || G.garageOpen) return; const bi = backInfo(); const bb = pm.querySelector('[data-k=back]'); bb.hidden = !bi; if (bi) bb.textContent = bi.label; pm.hidden = false; G.paused = true; G.pauseOpen = true; G.audio.setHold(true); if (document.pointerLockElement) document.exitPointerLock(); };
+  G.openPause = () => { if (!G.started || G.phoneOpen || G.garageOpen) return; const bi = backInfo(); const bb = pm.querySelector('[data-k=back]'); bb.hidden = !bi; pm.querySelector('[data-k=fs]').hidden = !(touch && document.documentElement.requestFullscreen && !document.fullscreenElement && !(window.matchMedia && (matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches))); if (bi) bb.textContent = bi.label; pm.hidden = false; G.paused = true; G.pauseOpen = true; G.audio.setHold(true); if (document.pointerLockElement) document.exitPointerLock(); };
   G.closePause = () => { if (pm.hidden) return; pm.hidden = true; G.pauseOpen = false; G.paused = false; G.audio.setHold(document.hidden); };
   document.addEventListener('visibilitychange', () => G.audio.setHold(document.hidden || G.pauseOpen)); // aba escondida também fica em silêncio
   pm.addEventListener('pointerdown', e => e.stopPropagation());
   pm.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) { if (e.target === pm) G.closePause(); return; } e.stopPropagation(); const k = b.dataset.k; G.closePause();
-    if (k === 'back') { const bi = backInfo(); if (bi) bi.go(); } else if (k === 'cfg') G.ui.openPhone('ajustes'); else if (k === 'ctl') G.drive && G.drive.openSettings(); });
+    if (k === 'back') { const bi = backInfo(); if (bi) bi.go(); } else if (k === 'cfg') G.ui.openPhone('ajustes'); else if (k === 'ctl') G.drive && G.drive.openSettings(); else if (k === 'fs') document.documentElement.requestFullscreen().catch(() => { }); });
   bP.addEventListener('pointerdown', e => e.stopPropagation()); bB.addEventListener('pointerdown', e => e.stopPropagation());
   bP.onclick = (e) => { e.stopPropagation(); G.audio.init(); G.pauseOpen ? G.closePause() : G.openPause(); };
   bB.onclick = (e) => { e.stopPropagation(); G.audio.init(); const bi = backInfo(); if (bi) bi.go(); };
@@ -471,10 +515,14 @@ G.backInfo = backInfo;
   apply(pref()); addEventListener('resize', () => { if (!G.topBar && localStorage.getItem(qk) === null) apply(innerWidth > innerHeight); });
   qb.onclick = (e) => { e.stopPropagation(); const m = !qd.classList.contains('min'); localStorage.setItem(qk, m ? '1' : '0'); apply(m); };
 }
-setupTopBar(G); setupMsgGuard(G); // t413/t416: textos nunca sobre o carro/estrada · t405: todos os atalhos numa fita de vidro no topo (substitui o recolher do t399)
+setupTopBar(G); setupEyes(G); setupMsgGuard(G); // t413/t416: textos nunca sobre o carro/estrada · t405: todos os atalhos numa fita de vidro no topo (substitui o recolher do t399)
 $('bPhone').onclick = () => G.phoneOpen ? G.ui.closePhone() : G.ui.openPhone(); $('bMap').onclick = () => G.ui.openMap(); $('bRadio').onclick = () => { G.audio.init(); G.radioSet(G.audio.station + 1); }; $('bCam').onclick = () => cycleCam();
+G.cycleCam = () => cycleCam();
 function cycleCam() { G.camMode = (G.camMode + 1) % 3; G.ui.toast(['Câmera normal', 'Câmera distante', 'Câmera próxima'][G.camMode], 1400); }
 G.radioSet = (i) => { const st = G.audio.setStation(i); save.station = G.audio.station; G.ui.radio(st); persist(); };
+G.horn = () => horn();
+// t440: volume do jogo (0 = sem som); salvo em vol-v1 (a tela de carregar também usa) e no save.muted
+G.setVolume = (v) => { v = Math.max(0, Math.min(1, +v || 0)); const A = G.audio; if (v > 0) { A.vol = v; A.setMuted(false); if (A.ok) A.master.gain.setTargetAtTime(v, A.ctx.currentTime, 0.05); } else A.setMuted(true); save.muted = A.muted; try { localStorage.setItem('vol-v1', String(v)); } catch (_) { } persist(); G.ui && G.ui.toast(v ? `🔊 Volume ${Math.round(v * 100)}%` : '🔇 Sem som', 1000); };
 function horn() { if (!G.player.vehicle) return; G.audio.horn(); const p = G.player; for (const c of G.crowd.peds) if (Math.hypot(c.x - p.x, c.z - p.z) < 14 && c.mode !== 'dodge' && c.mode !== 'lie') { c.mode = 'wave'; c.t = 1.5; c.h = Math.atan2(p.x - c.x, p.z - c.z); } }
 let photoReq = false;
 function photo() { if (!G.started || G.paused) return; photoReq = true; G.audio.chime('photo'); }
@@ -626,11 +674,11 @@ function updatePlayer(dt) {
     if (mobileDrive) DriveUI.tick(dt);
     let steer = mx, thr = my;
     if (fromStick && !mobileDrive) { steer = Math.sign(mx) * Math.min(1, Math.abs(mx) * 1.25) ** 1.4; thr = Math.abs(my) < 0.18 ? 0 : my; }
-    let hb = keys.has('Space') || input.hb; let nitro = keys.has('ShiftLeft') || keys.has('ShiftRight') || keys.has('KeyN') || input.nitro;
+    let nTap = false; let hb = keys.has('Space') || input.hb; let nitro = keys.has('ShiftLeft') || keys.has('ShiftRight') || keys.has('KeyN') || input.nitro;
     let hardBrake = false, limit = 1, kick = !!input.kick; input.kick = false;
     if (mobileDrive) {
       const d = DriveUI.input();
-      steer = d.x; thr = d.y; hb = hb || d.hb; nitro = nitro || d.nitro; hardBrake = d.hardBrake; limit = d.limit; kick = kick || d.kick;
+      steer = d.x; thr = d.y; hb = hb || d.hb; nitro = nitro || d.nitro; if ((d.nitroTaps || 0) !== (G._nTaps || 0)) { nTap = (G._nTaps || 0) < (d.nitroTaps || 0); G._nTaps = d.nitroTaps || 0; } hardBrake = d.hardBrake; limit = d.limit; kick = kick || d.kick;
     }
     if (G.race.frozen && v.race) { // largada: carro parado, motor acelerando
       v.vx = v.vz = v.vf = 0; v.steer += (steer - v.steer) * Math.min(1, dt * 7); v.rpm = lerp(v.rpm || 0, Math.max(0.12, thr) * 0.85, Math.min(1, dt * 6)); v.boosting = false; v.sync(dt);
@@ -666,9 +714,9 @@ function updatePlayer(dt) {
       } else v._inSea = false;
     }
     if (G.breaks) G.breaks.check(v, dt); // t418/t419: postes, sinaleiras, guarda-sóis e passarelas de madeira quebram
-    while (v._acc >= F && n < 3) { impact = Math.max(impact, v.drive(F, { x: steer, y: thr, hb, nitro, hardBrake, limit, kick: kick && n === 0, neutral: !!input.neutral }, others, G.t)); v._acc -= F; n++; }
+    while (v._acc >= F && n < 3) { impact = Math.max(impact, v.drive(F, { x: steer, y: thr, hb, nitro, nitroTap: nTap && n === 0, hardBrake, limit, kick: kick && n === 0, neutral: !!input.neutral }, others, G.t)); v._acc -= F; n++; }
     if (n >= 3) v._acc = 0;
-    if (v.boosting && !G._wasBoost) { G.audio.nitro(); } G._wasBoost = v.boosting;
+    if (v.boosting && !G._wasBoost) { G.audio.nitro(); } G._wasBoost = v.boosting; { const n2 = !!(v.boosting && v.n2); if (n2 && !G._wasN2) { G.audio.nitro(); G.ui.big && G.ui.big('NITRO 2!'); G.shake && G.shake(0.15); } G._wasN2 = n2; }
     if (impact > 2.5) { G.audio.thud(impact); G.shake(Math.min(0.7, impact * 0.05)); }
     p.x = v.x; p.z = v.z; p.y = v.y; p.h = v.h;
     hero.pose(v.spec.boat ? 'idle' : 'drive', 0, dt);
@@ -798,7 +846,7 @@ function updatePrompts() {
   if (hasN) { // nitro de cinco camadas
     if (!G._nsegs) G._nsegs = [...nw.querySelectorAll('.nSegs i')]; const n5 = v.nitro * NITRO_STAGES, st = v.boosting ? v.nStage || 1 : 0;
     G._nsegs.forEach((el, i) => { const f = clamp(n5 - i, 0, 1); const b = el.firstChild; const t = `scaleX(${f.toFixed(2)})`; if (b._t !== t) { b.style.transform = t; b._t = t; } const hot = st > i; if (el._h !== hot) { el.classList.toggle('hot', hot); el._h = hot; } });
-    const lb = st ? `NITRO ×${st}` : touch ? 'NITRO 🔥' : 'NITRO · Shift'; if (G._nl !== lb) { $('nitroL').textContent = lb; G._nl = lb; } nw.classList.toggle('on', v.boosting); }
+    const lb = st ? (v.n2 ? `NITRO 2 🔥×${st}` : `NITRO ×${st}`) : touch ? 'NITRO 🔥' : 'NITRO · Shift'; if (G._nl !== lb) { $('nitroL').textContent = lb; G._nl = lb; } nw.classList.toggle('on', v.boosting); }
   { // drift longo: janela de extensão (barra) + tempo + pêndulos encadeados
     const dw = $('driftW'); const dOn = !!(v && v.swD && v.drifting); if (dw.hidden === dOn) dw.hidden = !dOn;
     if (dOn) { const f = clamp(v.dExt / DRIFT_MAX, 0, 1); const b = $('driftB'); const t = `scaleX(${f.toFixed(2)})`; if (b._t !== t) { b.style.transform = t; b._t = t; }
@@ -881,7 +929,7 @@ function loop(now) {
 let adLo = 0, adHi = 0, adCool = 0, adDropT = -1e9; // t391: histerese + espera; não fica subindo/descendo a resolução (cada troca recriava os buffers = pisca)
 function lightenLive() { // t433: aparelho sofrendo — deixa leve NA HORA, sem recarregar a página; a próxima abertura já começa no modo leve
   G.lightened = true; const nq = Q.level === 'high' ? 'medium' : 'low'; save.autoQ = nq; persist();
-  renderer.shadowMap.enabled = false; if (bloom) bloom.enabled = false;
+  renderer.shadowMap.enabled = false; if (bloom) bloom.enabled = false; if (FX.ao) FX.ao.enabled = false; if (FX.smaa) FX.smaa.enabled = false;
   Q.prMin = Math.min(Q.prMin, 0.55); Q.viewHide = Math.min(Q.viewHide, 170); Q.detail = Math.min(Q.detail, 360); Q.animDist = Math.min(Q.animDist, 45);
   setPR(Math.max(0.55, pr - 0.1)); G.ui.toast('Gráficos mais leves para ficar fluido ⚡', 2500);
 }
@@ -889,7 +937,8 @@ function adapt() { // resolução dinâmica para manter fluido
   const nowS = performance.now() / 1000; adCool = Math.max(0, adCool - 1);
   if (G.recording) { adLo = adHi = 0; return; } // gravando: resolução fixa (trocar o tamanho do canvas quebra o vídeo mp4)
   adLo = fps < 40 ? adLo + 1 : 0; adHi = fps > 57 ? adHi + 1 : 0;
-  if (adCool > 0) { } else if (adLo >= 2 && pr > (G.recording ? 0.9 : Q.prMin) + 0.01) { setPR(pr - 0.1); adCool = 3; adLo = 0; adDropT = nowS; }
+  if (adCool > 0) { } else if (adLo >= 2 && FX.ao && FX.ao.enabled && !/fxlock/.test(location.search)) { FX.ao.enabled = false; adCool = 3; adLo = 0; adDropT = nowS; /* t435: o primeiro a sair quando pesa é a oclusão (antes de baixar a resolução) */ }
+  else if (adLo >= 2 && pr > (G.recording ? 0.9 : Q.prMin) + 0.01) { setPR(pr - 0.1); adCool = 3; adLo = 0; adDropT = nowS; }
   else if (adHi >= 6 && nowS - adDropT > 25 && pr < Math.min(Q.prMax, devicePixelRatio || 1, recCap()) - 0.01) { setPR(pr + 0.05); adCool = 5; adHi = 0; }
   if (save.quality === 'auto' && !urlQ && fps < 22 && pr <= Q.prMin + 0.01 && Q.level !== 'low' && !G.lightened) { slowT++; if (slowT >= 6) { lightenLive(); slowT = 0; } } else slowT = 0; // t433: antes recarregava a página aqui (o jogo "saía" e voltava para a tela inicial)
   // t432: aparelho forte de verdade (60 s fluido na resolução máxima) volta a poder usar o modo caprichado na próxima abertura
@@ -1000,18 +1049,30 @@ function render() {
   }
 }
 
-// t423: recado de boas-vindas da Solara — some com toque ou deslizando em qualquer direção; tela cheia só se o jogador pedir
-function solaraHi() { G.solaraHiShow = solaraHi;
-  if (document.getElementById('solaraHi')) return; const el = document.createElement('div'); el.id = 'solaraHi';
-  const fs = touch && document.documentElement.requestFullscreen && !(window.matchMedia && (matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches));
-  el.innerHTML = `<div class="shAv">☀️</div><div class="shTx"><b>Solara</b><span>Oi, eu sou a Solara! Se precisar sair do jogo, é só arrastar para cima.</span>${fs ? '<button id="shFs">⛶ Tela cheia</button>' : ''}<small>toque ou deslize para fechar</small></div>`;
-  document.body.appendChild(el); G.solaraHi = el; let x0 = 0, y0 = 0, down = false;
-  const close = () => { if (!el.isConnected) return; el.classList.add('out'); setTimeout(() => el.remove(), 260); G.solaraHi = null; };
+// t423/t436/t437: recados da Solara no estilo NOTIFICAÇÃO DE CELULAR (foto redonda + nome + texto): desliza do alto, fica ~2 s e sai sozinho.
+// Fica lá em cima (nunca cobre o carro). Toque/deslize também fecha. Vários recados entram em fila, um de cada vez.
+const solQ = []; let solCur = null;
+function solaraNote(text, opt = {}) {
+  solQ.push({ text, opt }); if (!solCur) solNext();
+}
+function solNext() {
+  const it = solQ.shift(); if (!it) { solCur = null; return; }
+  const { text, opt } = it; const el = document.createElement('div'); el.id = opt.id || 'solaraHi'; el.className = 'solNote'; el.setAttribute('role', 'status');
+  el.innerHTML = `<div class="shAv"><img src="assets/solara/solara.webp" alt="" onerror="this.remove()"><span class="avS">S</span></div><div class="shTx"><div class="shHd"><b>Solara</b><em>agora</em></div><span>${text}</span>${opt.fs ? '<button id="shFs">⛶ Tela cheia</button>' : ''}${opt.btn ? `<button id="shBtn">${opt.btn}</button>` : ''}</div>`;
+  document.body.appendChild(el); solCur = el; G.solaraHi = el; const lg = { t: text.replace(/<[^>]+>/g, '').slice(0, 40), on: performance.now(), off: 0 }; (G.solLog = G.solLog || []).push(lg); let x0 = 0, y0 = 0, down = false, hold = false, gone = false;
+  const close = () => { if (gone) return; gone = true; lg.off = performance.now(); el.classList.add('out'); setTimeout(() => { el.remove(); if (G.solaraHi === el) G.solaraHi = null; setTimeout(solNext, 250); }, 480); };
   el.addEventListener('pointerdown', (e) => { e.stopPropagation(); down = true; x0 = e.clientX; y0 = e.clientY; });
   el.addEventListener('pointermove', (e) => { if (down && Math.hypot(e.clientX - x0, e.clientY - y0) > 24) { down = false; close(); } });
-  el.addEventListener('pointerup', (e) => { e.stopPropagation(); if (!down) return; down = false; if (e.target.id === 'shFs') { document.documentElement.requestFullscreen().catch(() => { }); } close(); });
+  el.addEventListener('pointerup', (e) => { e.stopPropagation(); if (!down) return; down = false; if (e.target.id === 'shFs') { document.documentElement.requestFullscreen().catch(() => { }); } if (e.target.id === 'shBtn' && opt.onBtn) opt.onBtn(); close(); });
+  el.addEventListener('pointerenter', () => { hold = true; }); el.addEventListener('pointerleave', () => { hold = false; });
   el.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
-  setTimeout(close, 9000);
+  // conta só o tempo em que a tela está de fato desenhando (travadas de compilação/aba em 2º plano não "comem" o recado)
+  const need = (opt.ms || 2400) / 1000; let vis = 0, tl = performance.now(); const tick = (now) => { if (gone) return; const d = Math.min(0.1, Math.max(0, (now - tl) / 1000)); tl = now; if (!down) vis += hold ? d * 0.25 : d; /* t439: mouse parado em cima não prende o recado (nem a fila) para sempre */ lg.vis = +vis.toFixed(2); if (vis >= need) close(); else requestAnimationFrame(tick); }; requestAnimationFrame(tick);
+}
+G.solaraNote = solaraNote;
+function solaraHi() { G.solaraHiShow = solaraHi;
+  if (document.getElementById('solaraHi')) return;
+  solaraNote('Oi, eu sou a Solara! Se precisar sair do jogo, é só arrastar para cima.' + (touch ? ' Tela cheia fica na pausa ⏸.' : ''));
 }
 G.solaraHiShow = solaraHi;
 setupVersions('neon'); // tela inicial: Versões do jogo
@@ -1029,8 +1090,8 @@ $('play').onclick = () => {
   try { if (!history.state || !history.state.jogo) history.pushState({ jogo: 1 }, ''); } catch (e) { }
   G.audio.init(); $('start').hidden = true; $('hud').hidden = false; G.started = true; G.ui.resize(); resize();
   if (!G.resuming) solaraHi(); // t423: recado da Solara (substitui o aviso de tela cheia do navegador, que mostrava o endereço do site)
-  if (!G.resuming) G.ui.toast('Bem-vindo(a) a <b>Neon Distrito</b>! 🌴<br>Ande até um carro e aperte <b>' + (touch ? '🚗' : 'E') + '</b>', 5000);
-  if (!save.done) setTimeout(() => G.ui.phoneNote('@nexo.oficial', 'Dica: siga os ícones no mapa — 📦 entregas, 🏁 corridas, 📸 fotos e 🚕 táxi. Ninguém se machuca aqui!'), 2500);
+  if (!G.resuming) solaraNote('Bem-vindo(a) ao <b>Neon Distrito</b>! 🌃 Ande até um carro e aperte <b>' + (touch ? '🚗' : 'E') + '</b>.'); // t437: era um aviso solto no meio da tela
+  if (!save.done && !G.resuming) solaraNote('Dica: siga os ícones no mapa — 📦 entregas, 🏁 corridas, 📸 fotos e 🚕 táxi. Ninguém se machuca aqui!');
   last = performance.now();
 };
 { const cb = $('ctlBtn'), ch = $('ctlHelp'); if (cb && ch) cb.onclick = () => { ch.hidden = !ch.hidden; cb.setAttribute('aria-expanded', String(!ch.hidden)); }; } // t426: comandos recolhidos no botão Controles
@@ -1043,11 +1104,11 @@ $('qPlane').onclick = () => { if (!G.started || G.paused) return; G.audio.init()
 $('qCar').onclick = () => { if (!G.started || G.paused) return; G.audio.init(); G.callCar(); };
 $('qHome').onclick = () => { if (!G.started || G.paused) return; G.audio.init(); G.home.go(); };
 $('qFlash').onclick = () => { if (!G.started || G.paused) return; G.audio.init(); G.street.flash(); };
-$('qSerp').onclick = () => { if (!G.started || G.paused) return; G.audio.init(); G.serp.go(); };
+// t438: atalho ⚡ saiu da tela; o Circuito Plasma segue no menu do Loft Prisma e na tecla K (e no olho 3)
 $('ponteQuit').onclick = (e) => { e.stopPropagation(); if (G.ponte) G.ponte.quit(); };
 $('ponteQuit').addEventListener('pointerdown', (e) => e.stopPropagation());
 $('qPonte').onclick = () => { if (!G.started || G.paused) return; G.audio.init(); G.ponte.go(); };
-for (const id of ['qRace', 'qJet', 'qHeli', 'qPlane', 'qCar', 'qHome', 'qFlash', 'qSerp', 'qPonte']) $(id).addEventListener('pointerdown', (e) => e.stopPropagation());
+for (const id of ['qRace', 'qJet', 'qHeli', 'qPlane', 'qCar', 'qHome', 'qFlash', 'qPonte']) $(id).addEventListener('pointerdown', (e) => e.stopPropagation());
 addEventListener('visibilitychange', () => { if (document.hidden) { persist(); if (G.rec && G.rec.recording) G.rec.stop(); } });
 addEventListener('pagehide', persist);
 canvas.addEventListener('webglcontextlost', () => { G.ctxLost = (G.ctxLost || 0) + 1; persist(); }, false); // t433
@@ -1072,7 +1133,7 @@ window.MBD = {
   life: () => G.life, crowd: () => G.crowd, birds: () => G.birds, gifts: () => G.gifts, street: () => G.street, serp: () => G.serp, ponte: () => G.ponte, ilhas: () => G.ilhas, boatRace: () => G.boatRace, mega: () => G.mega, gps: () => G.gps, beach: () => G.beach, orla: () => G.orla, enterCar: (v) => G.enterCar(v), vehicles: () => G.vehicles,
   leaveCar: (s) => G.leaveCar(s), drive: () => DriveUI, respawnFade, onActTap, enterNearest, MOTOR, input,
   jetRace: () => G.jetRace, rec: () => G.rec, lighten: () => lightenLive(), persist: () => persist(), get flags() { return { started: !!G.started, resumed: !!G.resumed, lightened: !!G.lightened, pauseOpen: !!G.pauseOpen, ctxLost: G.ctxLost || 0 }; }, // t433
-  perf: () => ({ q: Q.level, detected: qDetected, autoQ: save.autoQ || null, pr: +pr.toFixed(2), prMax: Q.prMax, fps: +fps.toFixed(1), shadows: renderer.shadowMap.enabled, bloom: !!bloom, mem: navigator.deviceMemory || null, cores: navigator.hardwareConcurrency || null }), // t432
+  perf: () => ({ q: Q.level, detected: qDetected, autoQ: save.autoQ || null, pr: +pr.toFixed(2), prMax: Q.prMax, fps: +fps.toFixed(1), shadows: renderer.shadowMap.enabled, bloom: !!bloom, ao: !!(FX.ao && FX.ao.enabled), smaa: !!(FX.smaa && FX.smaa.enabled), fxErr: FX.err, mem: navigator.deviceMemory || null, cores: navigator.hardwareConcurrency || null }), // t432
   avatar: (id) => G.setAvatar(id), power: () => G.powers.trigger(), powers: () => G.powers, talk: () => G.talk, heli: () => G.heli, helis: () => G.helis, input,
 };
 

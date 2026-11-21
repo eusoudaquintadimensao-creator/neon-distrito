@@ -28,7 +28,7 @@ const DRIVERS = [
   { name: 'Lila Curva', skill: 0.96, type: 'rc_jdm', liv: 0 },
   { name: 'Leo Fumaça', skill: 0.92, type: 'rc_muscle', liv: 1 },
   { name: 'Nina Lateral', skill: 0.9, type: 'rc_gt', liv: 2 },
-  { name: 'Rafa Serpente', skill: 0.88, type: 'rc_hyper', liv: 3 },
+  { name: 'Rafa Faísca', skill: 0.88, type: 'rc_hyper', liv: 3 },
 ];
 
 function ribbonGeo(T, o0, o1, y) {
@@ -76,7 +76,7 @@ export class Plasma {
       g.strokeStyle = '#ff9a3c'; g.lineWidth = (D.halfW * 2 + 4) * k; path(); g.stroke();
       g.strokeStyle = '#2a2c32'; g.lineWidth = D.halfW * 2 * k; path(); g.stroke();
       g.strokeStyle = '#fff6'; g.lineWidth = 3 * k; g.beginPath(); g.moveTo(X(D.entrance.x), Z(D.entrance.z)); g.lineTo(X(D.entrance.x), Z(D.gap.z1)); g.stroke();
-      g.font = '13px sans-serif'; g.textAlign = 'center'; g.fillStyle = '#ffd23f'; g.fillText('🐍', X(-750), Z(740));
+      g.font = '13px sans-serif'; g.textAlign = 'center'; g.fillStyle = '#ffd23f'; g.fillText('🏎️', X(-750), Z(740));
     });
     this.spawnAI(); this.buildBar(); this.spawnFans();
   }
@@ -229,7 +229,7 @@ export class Plasma {
   go() {
     const G = this.G; if (G.player.vehicle) G.leaveCar(true);
     const p = this.at(8, 0); const entry = { x: SERP.entrance.x, z: SERP.entrance.z + 8, h: 0 };
-    G.placeOnFoot(entry.x, entry.z, 0); G.snapCam(); G.ui.toast('🐍 <b>Circuito Plasma</b> · entre no seu carro (🚘) e derrape nas curvas! Os rivais já estão na pista.', 3600);
+    G.placeOnFoot(entry.x, entry.z, 0); G.snapCam(); G.ui.toast('🏎️ <b>Circuito Plasma</b> · entre no seu carro (🚘) e derrape nas curvas! Os rivais já estão na pista.', 3600);
     G.audio.chime && G.audio.chime('start');
   }
   update(dt, t, camera) {
@@ -281,7 +281,7 @@ export class Plasma {
     this.on = false; this.leftT = 0;
     if (pts > 20) {
       this.data.runs++; this.data.last = pts; const rec = pts > this.data.best; if (rec) this.data.best = pts; saveData(this.data);
-      G.ui.toast(rec ? `🏆 Novo recorde no Circuito Plasma: <b>${pts.toLocaleString('pt-BR')}</b>!` : `🐍 Sessão: <b>${pts.toLocaleString('pt-BR')}</b> · recorde ${this.data.best.toLocaleString('pt-BR')}`, 3400);
+      G.ui.toast(rec ? `🏆 Novo recorde no Circuito Plasma: <b>${pts.toLocaleString('pt-BR')}</b>!` : `🏎️ Sessão: <b>${pts.toLocaleString('pt-BR')}</b> · recorde ${this.data.best.toLocaleString('pt-BR')}`, 3400);
       if (rec) G.audio.chime('win'); G.addFollowers && G.addFollowers(Math.min(8, 1 + Math.floor(pts / 800)));
     }
     this.hud(true);
