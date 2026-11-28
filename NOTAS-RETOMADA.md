@@ -151,3 +151,5 @@ Testes: d/i/il/al, 0 erros, regressão drive/mech/serp/ponte/linecheck + teste n
 
 ## t467 13:16 bbda95a tem os mesmos ajustes do Solara (notePush agrupado, #note sem transição, phoneNote chama notePush, bubbleAvoid, mascBuild, plateArmor). Rodando checagem rápida t467 i/il, t439 i, t413 i, t432.
 13:25 checagem local PASS: t439 i, t413 i, t467 i/il, t432 kb2422 ff4912 ready16603 fpsMin4.5 heap105. Merge ff e push.
+13:29 Neon Pages no ar (e260465): mascBuild/bubbleAvoid/plateArmor/phoneNote ok. t432 live PASS kb871 ff2044 ready10574 fpsAvg5.6 heap115. t467 i-live PASS. Começando redeploy do site (contadores intactos).
+13:35 site no ar com e260465. sitecheck d+i PASS.
