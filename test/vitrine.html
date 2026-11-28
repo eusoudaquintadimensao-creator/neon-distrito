@@ -1,0 +1,28 @@
+<!doctype html><html><head><meta charset="utf-8"><title>vitrine de avatares (teste)</title>
+<style>html,body{margin:0;background:#1d232b;overflow:hidden}canvas{display:block}#lb{position:fixed;left:0;right:0;bottom:4px;display:flex;justify-content:space-around;color:#fff;font:12px sans-serif}</style>
+<script type="importmap">{"imports":{"three":"../vendor/three/three.module.min.js","three/addons/":"../vendor/three/addons/"}}</script></head><body><div id="lb"></div>
+<script type="module">
+// t467: vitrine para prints de antes/depois (não faz parte do jogo). ?ids=ele,solar&mode=suit|civil&low=1&side=1
+import * as THREE from 'three';
+import { makeModel } from '../src/avatar.js';
+const P = new URLSearchParams(location.search); const ids = (P.get('ids') || 'ele,solar,colosso,sentinela,ferreo,tita,atlas').split(','); const mode = P.get('mode') || 'suit';
+const R = new THREE.WebGLRenderer({ antialias: true }); R.setSize(innerWidth, innerHeight); R.outputColorSpace = THREE.SRGBColorSpace; R.toneMapping = THREE.ACESFilmicToneMapping; document.body.appendChild(R.domElement);
+const S = new THREE.Scene(); S.background = new THREE.Color(0x2a323d); { const E = new THREE.Scene(); const sk = new THREE.Mesh(new THREE.SphereGeometry(20, 24, 12), new THREE.MeshBasicMaterial({ side: THREE.BackSide, vertexColors: true })); const pc = sk.geometry.attributes.position; const col = []; for (let i = 0; i < pc.count; i++) { const y = pc.getY(i) / 20; const c = y > 0 ? new THREE.Color(0x9fc4ff).lerp(new THREE.Color(0xffffff), y) : new THREE.Color(0x5a4a38); col.push(c.r, c.g, c.b); } sk.geometry.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); E.add(sk);
+  for (const [x, y, z] of [[8, 10, 6], [-9, 6, 4], [0, 4, -10]]) { const l = new THREE.Mesh(new THREE.PlaneGeometry(6, 4), new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })); l.position.set(x, y, z); l.lookAt(0, 0, 0); E.add(l); }
+  S.environment = new THREE.PMREMGenerator(R).fromScene(E, 0.02).texture; }
+S.add(new THREE.HemisphereLight(0xdfeaff, 0x3a3020, 0.8)); const sun = new THREE.DirectionalLight(0xfff2dd, 2.2); sun.position.set(3, 6, 5); S.add(sun);
+const floor = new THREE.Mesh(new THREE.CircleGeometry(30, 32), new THREE.MeshStandardMaterial({ color: 0x3b4450, roughness: 0.9 })); floor.rotation.x = -Math.PI / 2; S.add(floor);
+const gap = 1.25; const x0 = -(ids.length - 1) * gap / 2; const out = [];
+for (let i = 0; i < ids.length; i++) {
+  if (P.get('low')) { const h = await import('../src/heroes.js'); h.ARMOR.low = true; }
+  const look = mode === 'civil' ? { mode: 'civil', eq: {} } : mode === 'classico' ? { mode: 'suit', suit: 'classico' } : mode === 'traje' ? { mode: 'suit', suit: P.get('suit') || 'nano-solara' } : null;
+  try { const r = await makeModel(ids[i], null, null, mode === 'nano', look); r.model.position.x = x0 + i * gap; if (P.get('side')) r.model.rotation.y = Math.PI / 2.6; S.add(r.model);
+    const a = r.acts.Idle; if (a) { a.play(); r.mixer.update(0.6); } out.push(r); } catch (e) { console.error(ids[i], e.message); }
+  document.getElementById('lb').insertAdjacentHTML('beforeend', `<span>${ids[i]}</span>`);
+}
+const maxH = 2.5; const cam = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.1, 100);
+const span = ids.length * gap; const d = Math.max(maxH / (2 * Math.tan(15 * Math.PI / 180)), span / 2 / (Math.tan(15 * Math.PI / 180) * cam.aspect)) * 1.08;
+cam.position.set(0, 1.25, d); cam.lookAt(0, 1.15, 0);
+R.render(S, cam); let calls = R.info.render.calls, tris = R.info.render.triangles;
+window.VITRINE = { ok: out.length === ids.length, calls, tris, mats: (() => { const s = new Set(); S.traverse(o => { if (o.material) [].concat(o.material).forEach(m => s.add(m.uuid)); }); return s.size; })() };
+</script></body></html>

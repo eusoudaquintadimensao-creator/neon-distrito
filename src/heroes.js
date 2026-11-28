@@ -65,20 +65,97 @@ function helmet(model, k, shell, visor, open) {
   return attach(model, 'Head', g, [0, 0.11, 0.005], k);
 }
 
+// ---- t467: armadura de placas high-tech (desenho próprio): peitoral em placas, ombreiras em camadas, manoplas, grevas,
+// botas blindadas, costas com aletas de luz e capacete fechado com viseira em faixa. Metal PBR, materiais compartilhados.
+export const ARMOR = { low: false }; // main.js liga no modo leve: menos placas e menos lados
+const MC = new Map(); // cache de materiais (mesma cor/liga = mesmo material em todos os heróis)
+const MM = (c, m, r, e) => { const k = c + '|' + m + '|' + r + '|' + (e || 0); if (!MC.has(k)) MC.set(k, e ? GLOW(c, e) : new THREE.MeshStandardMaterial({ color: c, metalness: m, roughness: r, envMapIntensity: 1.5 })); return MC.get(k); };
+const GC = new Map(); const geo = (k, f) => { if (!GC.has(k)) GC.set(k, f()); return GC.get(k); }; // geometrias compartilhadas
+const MK = { UpperArm: 1.22, LowerArm: 1.15, UpperLeg: 1.1, LowerLeg: 1.06 }; // porte masculino (avatar.js MASC)
+// placa cilíndrica facetada entre t0..t1 do osso → próximo osso (acompanha o membro)
+export function segPlate(model, k, bone, next, t0, t1, r0, r1, m, sides = 8) {
+  model.updateMatrixWorld(true); const a = model.getObjectByName(bone), b = model.getObjectByName(next); if (!a || !b) return null;
+  const mk = model.userData.masc ? (MK[bone.replace(/[LR]$/, '')] || 1) : 1; r0 *= mk; r1 *= mk;
+  const pa = new THREE.Vector3().setFromMatrixPosition(a.matrixWorld), pb = new THREE.Vector3().setFromMatrixPosition(b.matrixWorld);
+  const Lt = pa.distanceTo(pb) / (k || 1) / (model.getWorldScale(new THREE.Vector3()).y || 1) * (model.getWorldScale(new THREE.Vector3()).y || 1); const L = (t1 - t0) * Lt;
+  const dir = pb.clone().sub(pa).normalize().applyQuaternion(model.getWorldQuaternion(new THREE.Quaternion()).invert());
+  const g = new THREE.CylinderGeometry(r0, r1, L, ARMOR.low ? 6 : sides, 1, false); g.translate(0, -L / 2 - t0 * Lt, 0);
+  const o = new THREE.Mesh(g, m); o.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir); return attach(model, bone, o, [0, 0, 0], k);
+}
+export function plateArmor(model, k, o = {}) {
+  const lo = ARMOR.low; const pm = Math.min(0.8, o.pm ?? 0.8), pr = Math.max(0.3, o.pr ?? 0.32); // metal com cor (reflete menos o chão escuro)
+  const plate = MM(o.plate, pm, pr), trim = MM(o.trim, 0.85, 0.3), dark = MM(o.dark ?? 0x15181d, 0.6, 0.45), gl = MM(o.glow, 0, 0.4, 2.0);
+  const z0 = model.userData.masc ? 0.018 : 0, w0 = model.userData.masc ? 1.14 : 1;
+  // peitoral: duas placas peitorais anguladas + placa alta da clavícula + gola blindada
+  for (const s of [-1, 1]) attach(model, 'Torso', grp(mesh(geo('pec', () => box(0.175, 0.15, 0.045)), plate, 0, 0, 0, -0.1, s * 0.26, 0), mesh(geo('pecT', () => box(0.17, 0.016, 0.05)), trim, 0, -0.082, 0.004, -0.1, s * 0.26, 0)), [s * 0.088 * w0, 0.19, 0.128 + z0], k);
+  attach(model, 'Torso', mesh(geo('clav', () => box(0.26, 0.05, 0.05)), trim, 0, 0, 0, -0.45, 0, 0), [0, 0.29, 0.1 + z0 * 0.5], k);
+  attach(model, 'Torso', mesh(geo('gorj', () => new THREE.CylinderGeometry(0.082, 0.105, 0.075, 8, 1, true)), dark), [0, 0.36, 0], k);
+  // luz do peito em chevron (não é círculo): duas barras em V
+  if (o.core !== false) attach(model, 'Torso', grp(mesh(geo('chv', () => box(0.075, 0.016, 0.012)), gl, 0.028, 0, 0, 0, 0, 0.5), mesh(geo('chv', () => box(0.075, 0.016, 0.012)), gl, -0.028, 0, 0, 0, 0, -0.5)), [0, 0.2, 0.158 + z0], k);
+  // abdômen em placas (3 fileiras × 2) com vinco escuro no meio
+  if (!lo) for (let i = 0; i < 3; i++) for (const s of [-1, 1]) attach(model, 'Torso', mesh(geo('ab' + i, () => box(0.072 - i * 0.006, 0.044, 0.032)), plate), [s * 0.04, 0.07 - i * 0.052, 0.12 + z0 * 0.6], k);
+  else attach(model, 'Torso', mesh(geo('abL', () => box(0.15, 0.15, 0.03)), plate), [0, 0.02, 0.12 + z0 * 0.6], k);
+  attach(model, 'Torso', mesh(geo('abS', () => box(0.012, 0.16, 0.034)), dark), [0, 0.02, 0.122 + z0 * 0.6], k);
+  // laterais e costas com duas aletas de luz
+  if (!lo) for (const s of [-1, 1]) attach(model, 'Torso', mesh(geo('rib', () => box(0.035, 0.17, 0.13)), trim), [s * 0.17 * w0, 0.13, 0.0], k);
+  attach(model, 'Torso', mesh(geo('back', () => box(0.33, 0.3, 0.04)), plate), [0, 0.17, -0.128 - z0 * 0.4], k);
+  if (!lo) for (const s of [-1, 1]) attach(model, 'Torso', mesh(geo('vent', () => box(0.018, 0.14, 0.012)), gl), [s * 0.07, 0.17, -0.152 - z0 * 0.4], k);
+  // ombreiras em 3 camadas com friso de luz
+  for (const s of [1, -1]) { const g = new THREE.Group();
+    const c0 = mesh(geo('pau0', () => new THREE.SphereGeometry(0.112, lo ? 8 : 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.5)), plate); c0.scale.set(1, 0.85, 1.02); g.add(c0);
+    if (!lo) { const c1 = mesh(geo('pau1', () => new THREE.CylinderGeometry(0.108, 0.112, 0.05, 12, 1, false)), trim, s * 0.006, -0.03, 0); g.add(c1); }
+    g.add(mesh(geo('pauG', () => box(0.014, 0.014, 0.15)), gl, s * 0.075, 0.02, 0)); attach(model, s > 0 ? 'UpperArmL' : 'UpperArmR', g, [s * 0.025, 0.035, 0], k); }
+  // braços: placa do bíceps, manopla com punho largo e friso, mão blindada
+  for (const s of ['L', 'R']) {
+    // malha escura por baixo (sem pele aparecendo entre as placas)
+    segPlate(model, k, 'UpperArm' + s, 'LowerArm' + s, -0.05, 1.08, 0.08, 0.07, dark, 6); segPlate(model, k, 'LowerArm' + s, 'Palm' + s, 0, 1.0, 0.068, 0.058, dark, 6);
+    segPlate(model, k, 'UpperLeg' + s, 'LowerLeg' + s, 0, 1.05, 0.086, 0.07, dark, 6); segPlate(model, k, 'LowerLeg' + s, 'Foot' + s, 0, 1.1, 0.07, 0.066, dark, 6);
+    segPlate(model, k, 'UpperArm' + s, 'LowerArm' + s, 0.28, 0.86, 0.085, 0.077, plate);
+    segPlate(model, k, 'LowerArm' + s, 'Palm' + s, 0.12, 0.92, 0.073, 0.066, plate);
+    segPlate(model, k, 'LowerArm' + s, 'Palm' + s, 0.86, 1.0, 0.079, 0.081, trim);
+    if (!lo) attach(model, 'LowerArm' + s, mesh(geo('gStrip', () => box(0.016, 0.12, 0.012)), gl), [0, -0.14, 0.066], k);
+    const h = mesh(geo('hand', () => new THREE.DodecahedronGeometry(0.052, 0)), plate); h.scale.set(1, 0.8, 0.85); attach(model, 'Palm' + s, h, [0, 0.035, 0], k);
+    // pernas: coxote em duas placas, joelheira, greva e bota blindada
+    segPlate(model, k, 'UpperLeg' + s, 'LowerLeg' + s, 0.06, 0.5, 0.094, 0.086, plate);
+    segPlate(model, k, 'UpperLeg' + s, 'LowerLeg' + s, 0.5, 0.56, 0.088, 0.088, dark);
+    segPlate(model, k, 'UpperLeg' + s, 'LowerLeg' + s, 0.56, 0.95, 0.086, 0.076, plate);
+    attach(model, 'LowerLeg' + s, mesh(geo('knee', () => new THREE.SphereGeometry(0.06, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.55)), trim, 0, 0, 0, Math.PI / 2, 0, 0), [0, 0.0, 0.05], k);
+    segPlate(model, k, 'LowerLeg' + s, 'Foot' + s, 0.1, 1.0, 0.074, 0.066, plate);
+    if (!lo) attach(model, 'LowerLeg' + s, mesh(geo('sStrip', () => box(0.014, 0.16, 0.012)), gl), [0, -0.18, 0.07], k);
+    attach(model, 'Foot' + s, grp(mesh(geo('boot', () => box(0.12, 0.09, 0.24)), plate, 0, 0, 0.035), mesh(geo('bootT', () => box(0.124, 0.02, 0.244)), dark, 0, -0.045, 0.035), mesh(geo('bootC', () => new THREE.CylinderGeometry(0.078, 0.074, 0.17, 8)), trim, 0, 0.1, -0.01)), [0, -0.0, 0.0], k);
+  }
+  // cinturão blindado com placa central
+  attach(model, 'Hips', mesh(geo('belt', () => new THREE.CylinderGeometry(0.165, 0.172, 0.07, 10, 1, true)), dark), [0, 0.09, 0], k);
+  attach(model, 'Hips', mesh(geo('buck', () => box(0.09, 0.055, 0.025)), trim), [0, 0.09, 0.172], k);
+}
+// capacete fechado (casco + máscara angulosa + viseira em faixa + crista); aberto = rosto à mostra com viseira levantada
+export function plateHelmet(model, k, o = {}) {
+  const shell = MM(o.shell, 0.9, 0.26), face = MM(o.face ?? o.shell, 0.9, 0.24), vis = MM(o.visor, 0, 0.4, 2.2), dark = MM(0x15181d, 0.6, 0.45);
+  const g = grp(mesh(geo('hShell', () => new THREE.SphereGeometry(0.152, ARMOR.low ? 10 : 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.6)), shell),
+    mesh(geo('hCrest', () => box(0.034, 0.024, 0.25)), face, 0, 0.145, -0.01));
+  if (!o.open) {
+    g.add(mesh(geo('hFace', () => box(0.17, 0.12, 0.05)), face, 0, -0.03, 0.118));
+    g.add(mesh(geo('hChin', () => box(0.12, 0.05, 0.06)), face, 0, -0.1, 0.1, 0.35, 0, 0));
+    for (const s of [-1, 1]) g.add(mesh(geo('hCheek', () => box(0.04, 0.12, 0.12)), shell, s * 0.12, -0.04, 0.05, 0, s * 0.15, 0));
+    g.add(mesh(geo('hVis', () => box(0.16, 0.024, 0.012)), vis, 0, 0.012, 0.145));
+    g.add(mesh(geo('hVent', () => box(0.06, 0.01, 0.012)), dark, 0, -0.07, 0.132));
+  } else { g.add(mesh(geo('hVisUp', () => box(0.19, 0.03, 0.04)), vis, 0, 0.07, 0.125)); for (const s of [-1, 1]) g.add(mesh(geo('hEar', () => box(0.03, 0.08, 0.08)), shell, s * 0.15, -0.02, 0)); }
+  return attach(model, 'Head', g, [0, 0.11, 0.005], k);
+}
+
 // t431: traje de titã (gigantes): armadura marinho/grafite com placas prata, emblema de sol dourado e energia dourada nos punhos — desenho próprio
 export function titanSuit(model, k, o = {}) {
-  tacArmor(model, k, { plate: o.plate ?? 0xb9c0c8, trim: o.trim ?? 0x1c2a44, glow: 0xffc44d, pm: 0.92, pr: 0.22, suit: o.suit ?? 0x1c2a44, core: false });
+  plateArmor(model, k, { plate: o.plate ?? 0xb9c0c8, trim: o.trim ?? 0x1c2a44, dark: o.suit ?? 0x1c2a44, glow: 0xffc44d, pm: 0.92, pr: 0.22, core: false }); // t467: placas
   const silver = M(0xc9ced6, { metalness: 0.95, roughness: 0.2 }), sun = GLOW(0xffc44d, 2.6), navy = M(o.suit ?? 0x1c2a44, { metalness: 0.5, roughness: 0.4 });
   // emblema de sol: disco + 12 raios finos alternados (desenho próprio)
   const em = grp(mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.02, 16), sun, 0, 0, 0, Math.PI / 2));
   for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, L = i % 2 ? 0.05 : 0.08; em.add(mesh(box(0.012, L, 0.012), sun, Math.cos(a) * (0.05 + L / 2), Math.sin(a) * (0.05 + L / 2), 0, 0, 0, a - Math.PI / 2)); }
   attach(model, 'Torso', em, [0, 0.17, 0.162], k);
   // ombreiras prata grandes por cima, cinto prata com placa central
-  for (const s of [1, -1]) { const sh = grp(mesh(new THREE.SphereGeometry(0.115, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), silver), mesh(box(0.012, 0.012, 0.16), sun, s * 0.06, 0.045, 0)); sh.scale.set(1, 0.7, 1); attach(model, s > 0 ? 'UpperArmL' : 'UpperArmR', sh, [s * -0.01, -0.06, 0], k); }
-  attach(model, 'Hips', grp(mesh(new THREE.TorusGeometry(0.175, 0.026, 6, 24), silver, 0, 0, 0, Math.PI / 2), mesh(box(0.12, 0.07, 0.03), silver, 0, 0, 0.18)), [0, 0.1, 0], k);
+  // (t467: ombreiras/cinto/manoplas agora vêm da armadura de placas)
   // manoplas prata e energia dourada em volta dos punhos
   const fx = new THREE.MeshBasicMaterial({ color: 0xffc44d, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
-  for (const s of ['L', 'R']) { attach(model, 'LowerArm' + s, mesh(new THREE.CylinderGeometry(0.075, 0.065, 0.2, 10), silver), [0, -0.15, 0], k); attach(model, 'Palm' + s, grp(mesh(new THREE.SphereGeometry(0.07, 10, 8), navy), mesh(new THREE.IcosahedronGeometry(0.11, 1), fx)), [0, 0.04, 0], k); }
+  for (const s of ['L', 'R']) { attach(model, 'Palm' + s, grp(mesh(new THREE.SphereGeometry(0.07, 10, 8), navy), mesh(new THREE.IcosahedronGeometry(0.11, 1), fx)), [0, 0.04, 0], k); }
 }
 
 export const HEROES = {
@@ -102,8 +179,8 @@ export const HEROES = {
     fallback: { skin: 0x24272c, shirt: 0x2b2e33, pants: 0x24272c, hair: 0x2b2e33, stripe: 0xd9b45a },
     gear(model, k) {
       const sun = GLOW(0xfff1b8, 2.4);
-      helmet(model, k, M(0xc9a24e, { metalness: 0.85, roughness: 0.28 }), GLOW(0x9fdcff, 2));
-      tacArmor(model, k, { plate: 0xc9a24e, trim: 0x2b2e33, glow: 0xffd27a, pm: 0.88, pr: 0.26, core: false });
+      plateHelmet(model, k, { shell: 0x3a3f47, face: 0xc9a24e, visor: 0x9fdcff });
+      plateArmor(model, k, { plate: 0xc9a24e, trim: 0x3a3f47, glow: 0xffd27a, pm: 0.92, pr: 0.24, core: false }); // t467: armadura de placas grafite/dourada
       // emblema solar: hexágono com raios (desenho próprio)
       const em = grp(mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.02, 6), sun, 0, 0, 0, Math.PI / 2));
       for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + Math.PI / 6; em.add(mesh(box(0.01, 0.035, 0.01), sun, Math.cos(a) * 0.065, Math.sin(a) * 0.065, 0, 0, 0, a - Math.PI / 2)); }
@@ -129,8 +206,8 @@ export const HEROES = {
     fallback: { skin: 0xb07a52, shirt: 0x1e3a44, pants: 0x22262c, hair: 0x2a1c12, stripe: 0xd9b45a },
     gear(model, k) {
       const steel = M(0x2f353d, { metalness: 0.75, roughness: 0.32 }), gold = M(0xc9a24e, { metalness: 0.85, roughness: 0.3 }), teal = GLOW(0x4ff7e0, 1.4);
-      helmet(model, k, steel, teal, true);
-      tacArmor(model, k, { plate: 0x2f353d, trim: 0xc9a24e, glow: 0x4ff7e0, suit: 0x1e3a44 });
+      plateHelmet(model, k, { shell: 0x2f353d, visor: 0x4ff7e0, open: true });
+      plateArmor(model, k, { plate: 0x3a434d, trim: 0xc9a24e, dark: 0x1e3a44, glow: 0x4ff7e0, pm: 0.85, pr: 0.3 });
       // escudo hexagonal de aço com aro dourado e anel turquesa (desenho próprio)
       const sh = grp(mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.03, 6), gold), mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.036, 6), steel), mesh(new THREE.TorusGeometry(0.15, 0.012, 6, 6), teal, 0, 0.02, 0, Math.PI / 2), mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.045, 6), teal));
       sh.children.forEach(c => { if (c.geometry.type === 'TorusGeometry') { c.rotation.set(0, Math.PI / 2, 0); c.position.set(0.02, 0, 0); } else c.rotation.z = Math.PI / 2; });
@@ -144,10 +221,11 @@ export const HEROES = {
     fallback: { skin: 0xb98a66, shirt: 0x30343a, pants: 0x26292e, hair: 0x2c2c2c, stripe: 0x9ea6ad },
     gear(model, k) {
       const cloth = M(0x24272b, { roughness: 0.85, side: THREE.DoubleSide });
-      helmet(model, k, M(0x8f979f, { metalness: 0.85, roughness: 0.3 }), GLOW(0xffc46b, 1.8));
-      tacArmor(model, k, { plate: 0x8f979f, trim: 0x30343a, glow: 0xffc46b, pm: 0.85 });
-      const capeGeo = new THREE.PlaneGeometry(0.52, 1.15, 4, 6); capeGeo.translate(0, -0.6, 0);
-      const pos = capeGeo.attributes.position; for (let i = 0; i < pos.count; i++) { const x = pos.getX(i), y = pos.getY(i); pos.setZ(i, x * x * 2.2 + y * 0.1); pos.setX(i, x * (1 - y * 0.3)); } capeGeo.computeVertexNormals();
+      plateHelmet(model, k, { shell: 0x8f979f, face: 0x6d757d, visor: 0xffc46b });
+      plateArmor(model, k, { plate: 0x9aa2aa, trim: 0x30343a, glow: 0xffc46b, pm: 0.92, pr: 0.22 });
+      // t467: capa estreita e reta só nas costas (sem silhueta de vestido): não alarga para baixo, fica atrás dos ombros largos
+      const capeGeo = new THREE.PlaneGeometry(0.4, 1.0, 4, 6); capeGeo.translate(0, -0.52, 0);
+      const pos = capeGeo.attributes.position; for (let i = 0; i < pos.count; i++) { const x = pos.getX(i), y = pos.getY(i); pos.setZ(i, x * x * 1.4 + y * 0.1); pos.setX(i, x * (1 + y * 0.12)); } capeGeo.computeVertexNormals();
       const capeM = mesh(capeGeo, cloth); attach(model, 'Torso', grp(capeM), [0, 0.3, -0.17], k); model.userData.cape = capeM;
     },
   },
@@ -158,7 +236,7 @@ export const HEROES = {
     fallback: { skin: 0x6b4a35, shirt: 0x2a2d33, pants: 0x202328, hair: 0x1a1410, stripe: 0xd9a441 },
     gear(model, k) {
       const gold = M(0xb48a3c, { metalness: 0.85, roughness: 0.3 });
-      tacArmor(model, k, { plate: 0x3a3f47, trim: 0xb48a3c, glow: 0x4ff7e0, suit: 0x2a2d33 });
+      plateArmor(model, k, { plate: 0x4a5059, trim: 0xb48a3c, dark: 0x2a2d33, glow: 0x4ff7e0, pm: 0.9, pr: 0.26 });
       // braçadeira de impacto (desenho próprio): placas facetadas e um núcleo turquesa
       const g = grp(mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.16, 6), gold), mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.02, 6), GLOW(0x4ff7e0, 2.2), 0, -0.02, 0.065, Math.PI / 2));
       model.userData.gauntlet = attach(model, 'LowerArmR', g, [0, -0.1, 0], k);

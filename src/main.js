@@ -18,6 +18,7 @@ import { Gauchos } from './gauchos.js';
 import { Vehicle, SPECS, setVehicleLights, MOTOR, NITRO_STAGES, DRIFT_MAX } from './vehicles.js';
 import { Crowd, Hero } from './people.js';
 import { Avatar, AVATARS, AVATAR_IDS, preloadAvatars, setLookSource } from './avatar.js';
+import { ARMOR } from './heroes.js';
 import { Wardrobe } from './wardrobe.js';
 import { DEVICE } from './device.js';
 import { Traffic } from './traffic.js';
@@ -58,7 +59,7 @@ import { Gifts } from './gifts.js';
 import { Street } from './street.js';
 import { DriveUI, respawnFade } from './driveui.js';
 import { setupTopBar } from './topbar.js';
-import { setupMsgGuard } from './msgguard.js';
+import { setupMsgGuard, MSG_IDS } from './msgguard.js';
 import { setupEyes } from './eyes.js';
 import { flyCam } from './flyover.js';
 
@@ -103,6 +104,7 @@ const QORD = ['low', 'medium', 'high'];
 const qDetected = detectQuality(); // t432: se o FPS já obrigou a baixar antes, lembra disso na próxima abertura (save.autoQ)
 const qName = (urlQ && PRESETS[urlQ]) ? urlQ : save.quality !== 'auto' && PRESETS[save.quality] ? save.quality : (save.autoQ && PRESETS[save.autoQ] && QORD.indexOf(save.autoQ) < QORD.indexOf(qDetected)) ? save.autoQ : qDetected;
 const Q = forDevice(PRESETS[qName]);
+ARMOR.low = Q.level === 'low'; // t467: armadura de placas mais simples no modo leve
 $('qsel').value = save.quality || 'auto';
 $('qsel').onchange = (e) => { save.quality = e.target.value; persist(); location.reload(); };
 
@@ -928,7 +930,7 @@ function loop(now) {
 }
 let adLo = 0, adHi = 0, adCool = 0, adDropT = -1e9; // t391: histerese + espera; não fica subindo/descendo a resolução (cada troca recriava os buffers = pisca)
 function lightenLive() { // t433: aparelho sofrendo — deixa leve NA HORA, sem recarregar a página; a próxima abertura já começa no modo leve
-  G.lightened = true; const nq = Q.level === 'high' ? 'medium' : 'low'; save.autoQ = nq; persist();
+  G.lightened = true; const nq = Q.level === 'high' ? 'medium' : 'low'; ARMOR.low = nq === 'low'; save.autoQ = nq; persist();
   renderer.shadowMap.enabled = false; if (bloom) bloom.enabled = false; if (FX.ao) FX.ao.enabled = false; if (FX.smaa) FX.smaa.enabled = false;
   Q.prMin = Math.min(Q.prMin, 0.55); Q.viewHide = Math.min(Q.viewHide, 170); Q.detail = Math.min(Q.detail, 360); Q.animDist = Math.min(Q.animDist, 45);
   setPR(Math.max(0.55, pr - 0.1)); G.ui.toast('Gráficos mais leves para ficar fluido ⚡', 2500);
@@ -1056,11 +1058,13 @@ function solaraNote(text, opt = {}) {
   solQ.push({ text, opt }); if (!solCur) solNext();
 }
 function solNext() {
+  if (solQ.length && G.eyes && G.eyes.open && innerHeight > innerWidth) { solCur = 'wait'; setTimeout(solNext, 500); return; } // t467: celular em pé com menu dos olhos aberto: o recado espera (não empurra o menu para cima do carro)
   const it = solQ.shift(); if (!it) { solCur = null; return; }
   const { text, opt } = it; const el = document.createElement('div'); el.id = opt.id || 'solaraHi'; el.className = 'solNote'; el.setAttribute('role', 'status');
   el.innerHTML = `<div class="shAv"><img src="assets/solara/solara.webp" alt="" onerror="this.remove()"><span class="avS">S</span></div><div class="shTx"><div class="shHd"><b>Solara</b><em>agora</em></div><span>${text}</span>${opt.fs ? '<button id="shFs">⛶ Tela cheia</button>' : ''}${opt.btn ? `<button id="shBtn">${opt.btn}</button>` : ''}</div>`;
   document.body.appendChild(el); solCur = el; G.solaraHi = el; const lg = { t: text.replace(/<[^>]+>/g, '').slice(0, 40), on: performance.now(), off: 0 }; (G.solLog = G.solLog || []).push(lg); let x0 = 0, y0 = 0, down = false, hold = false, gone = false;
-  const close = () => { if (gone) return; gone = true; lg.off = performance.now(); el.classList.add('out'); setTimeout(() => { el.remove(); if (G.solaraHi === el) G.solaraHi = null; setTimeout(solNext, 250); }, 480); };
+  const close = () => { if (gone) return; gone = true; lg.off = performance.now(); el.classList.add('out'); setTimeout(() => { el.remove(); if (G.solaraHi === el) G.solaraHi = null; if (!solQ.length) notePush(null); setTimeout(solNext, 250); }, 480); };
+  requestAnimationFrame(() => notePush(el)); const npI = setInterval(() => { if (!el.isConnected || gone) clearInterval(npI); else notePush(el); }, 300); // t467: o recado empurra para baixo o que estiver embaixo dele (minimapa, olhos, relógio, ⏸)
   el.addEventListener('pointerdown', (e) => { e.stopPropagation(); down = true; x0 = e.clientX; y0 = e.clientY; });
   el.addEventListener('pointermove', (e) => { if (down && Math.hypot(e.clientX - x0, e.clientY - y0) > 24) { down = false; close(); } });
   el.addEventListener('pointerup', (e) => { e.stopPropagation(); if (!down) return; down = false; if (e.target.id === 'shFs') { document.documentElement.requestFullscreen().catch(() => { }); } if (e.target.id === 'shBtn' && opt.onBtn) opt.onBtn(); close(); });
@@ -1069,7 +1073,27 @@ function solNext() {
   // conta só o tempo em que a tela está de fato desenhando (travadas de compilação/aba em 2º plano não "comem" o recado)
   const need = (opt.ms || 2400) / 1000; let vis = 0, tl = performance.now(); const tick = (now) => { if (gone) return; const d = Math.min(0.1, Math.max(0, (now - tl) / 1000)); tl = now; if (!down) vis += hold ? d * 0.25 : d; /* t439: mouse parado em cima não prende o recado (nem a fila) para sempre */ lg.vis = +vis.toFixed(2); if (vis >= need) close(); else requestAnimationFrame(tick); }; requestAnimationFrame(tick);
 }
-G.solaraNote = solaraNote;
+// t467: enquanto o recado está na tela, os controles do alto que ele cobriria descem (como notificação de celular empurrando a tela)
+const NOTE_SKIP = new Set([...MSG_IDS.filter(i => i !== 'note'), 'say', 'toast', 'big', 'area', 'eyeMenu', 'stickZone', 'touch', 'phone', 'pauseMenu', 'mapFull', 'fade', 'prompt', 'radioSub', 'mis', 'misTime']); // mensagens (MSG_IDS) já são posicionadas pelo msgguard
+const curDy = (e) => { const t = getComputedStyle(e).translate; if (!t || t === 'none') return 0; const p = t.split(' '); return parseFloat(p[1] || 0) || 0; };
+function notePush(el) {
+  const hud = document.getElementById('hud'), ey = document.getElementById('eyes'); const els = [...(hud ? hud.children : []), ...(ey ? ey.children : [])].filter(e => e.id && e.id !== 'eyes' && !NOTE_SKIP.has(e.id) && !(e.id === 'note' && G.player && G.player.vehicle) /* dirigindo, o msgguard cuida do #note */ && !e.classList.contains('solNote'));
+  const on = el && el.isConnected; const nrc = on ? el.getBoundingClientRect() : null; const nb = on ? el.offsetTop + el.offsetHeight : 0, nl = on ? nrc.left : 0, nr = on ? nrc.right : 0; // horizontal pelo retângulo (translateX(-50%)), altura sem a animação de entrada
+  const pushed = []; const info = [];
+  for (const e of els) { let need = 0, L = 1e9, R = -1e9;
+    const cs = getComputedStyle(e); if (cs.display !== 'none' && cs.visibility !== 'hidden') { const o = curDy(e); let T = 1e9, B = -1e9;
+      for (const k of [e, ...e.querySelectorAll('button,canvas')]) { const q = k.getBoundingClientRect(); if (q.width < 3 || q.height < 3) continue; if (k !== e && getComputedStyle(k).display === 'none') continue; L = Math.min(L, q.left); R = Math.max(R, q.right); T = Math.min(T, q.top - o); B = Math.max(B, q.bottom - o); }
+      if (R > L && B - T < innerHeight * 0.6 && (!on || T < nb + 120 || e.id === 'note')) { info.push({ e, L, R, T }); if (on && Math.min(R, nr) - Math.max(L, nl) > 2 && T < nb + 4) info[info.length - 1].need = Math.ceil(nb + 6 - T); } } }
+  // grupos que se tocam na horizontal descem juntos (mesmo deslocamento) para não se atropelarem
+  const grp = info.map((_, i) => i); const f = (i) => grp[i] === i ? i : (grp[i] = f(grp[i]));
+  for (let i = 0; i < info.length; i++) for (let j = i + 1; j < info.length; j++) if (Math.min(info[i].R, info[j].R) - Math.max(info[i].L, info[j].L) > 1) grp[f(j)] = f(i);
+  const gd = new Map(); info.forEach((o, i) => { const g = f(i); gd.set(g, Math.max(gd.get(g) || 0, o.need || 0)); });
+  info.forEach((o, i) => { const dy = on ? gd.get(f(i)) : 0; const e = o.e; if (dy !== (e._np || 0)) { e.style.transition = e.id === 'note' ? 'none' : 'translate .3s ease'; e.style.translate = dy ? `0 ${dy}px` : ''; e._np = dy; } if (dy) pushed.push(e.id); });
+  for (const e of els) if (e._np && !info.some(o => o.e === e)) { e.style.translate = ''; e._np = 0; }
+  G.notePushed = pushed; return pushed;
+}
+G.solaraNote = solaraNote; G.notePush = notePush;
+{ const pn = G.ui && G.ui.phoneNote; if (pn) G.ui.phoneNote = function (...a) { const r = pn.apply(this, a); const sn = document.querySelector('.solNote'); if (sn) { notePush(sn); requestAnimationFrame(() => notePush(sn)); } return r; }; } /* t467: o aviso do celular entra já fora do minimapa empurrado */
 function solaraHi() { G.solaraHiShow = solaraHi;
   if (document.getElementById('solaraHi')) return;
   solaraNote('Oi, eu sou a Solara! Se precisar sair do jogo, é só arrastar para cima.' + (touch ? ' Tela cheia fica na pausa ⏸.' : ''));

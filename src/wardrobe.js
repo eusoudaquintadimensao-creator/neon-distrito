@@ -1,11 +1,11 @@
 // Guarda-roupa (t408/t410): roupas estilo Miami (seda, linho, resort) para todos os personagens, acessórios presos aos ossos
 // e trajes de herói originais com poderes. Tudo procedural (sem marcas/nomes de terceiros). Salvo por personagem em save.ward.
 import * as THREE from 'three';
-import { attach, HEROES, heroMaterials } from './heroes.js';
+import { attach, HEROES, heroMaterials, plateArmor, plateHelmet } from './heroes.js';
 
 // tecidos: brilho/aspereza (seda brilha, linho é fosco)
 export const FAB = { seda: { r: 0.3, m: 0.12, n: 'seda' }, linho: { r: 0.95, m: 0, n: 'linho' }, algodao: { r: 0.82, m: 0, n: 'algodão' }, couro: { r: 0.45, m: 0.08, n: 'couro' }, palha: { r: 0.95, m: 0, n: 'palha' }, metal: { r: 0.3, m: 0.85, n: 'metal' }, acetato: { r: 0.25, m: 0.1, n: 'acetato' } };
-export const SLOTS = [['top', '👚', 'Partes de cima e vestidos'], ['bottom', '👖', 'Calças e saias'], ['shoes', '👡', 'Sapatos'], ['hat', '👒', 'Chapéus'], ['glasses', '🕶️', 'Óculos'], ['bag', '👜', 'Bolsas']];
+export const SLOTS = [['top', '👚', 'Partes de cima e vestidos'], ['bottom', '👖', 'Calças e saias'], ['shoes', '👡', 'Sapatos'], ['hat', '👒', 'Chapéus'], ['glasses', '🕶️', 'Óculos'], ['bag', '👜', 'Bolsas e acessórios']];
 // [id, slot, sexo f/m/u, nome, preço, cor, tecido, tipo, extra]
 const RAW = [
   ['f-blusa-seda-coral', 'top', 'f', 'Blusa de seda coral', 180, 0xff7f6e, 'seda', 'blusa'],
@@ -28,17 +28,23 @@ const RAW = [
   ['m-camisa-linho', 'top', 'm', 'Camisa de linho branca', 190, 0xf8f6f0, 'linho', 'camisa'],
   ['m-camisa-palmeiras', 'top', 'm', 'Camisa de seda estampa palmeiras', 340, 0x0e6b5c, 'seda', 'camisa', { print: 0xf6e7c8 }],
   ['m-guayabera', 'top', 'm', 'Guayabera de linho areia', 260, 0xe9dcc0, 'linho', 'guayabera'],
-  ['m-polo-menta', 'top', 'm', 'Polo de piquet menta', 150, 0x9ee6c8, 'algodao', 'camisa'],
+  ['m-polo-menta', 'top', 'm', 'Polo de piquet verde-oliva', 150, 0x5f6f3e, 'algodao', 'polo'],
   ['m-blazer-marinho', 'top', 'm', 'Blazer de linho azul-marinho', 780, 0x23395b, 'linho', 'blazer'],
-  ['m-cubana-coral', 'top', 'm', 'Camisa cubana de seda coral', 280, 0xff7f6e, 'seda', 'camisa'],
+  ['m-cubana-coral', 'top', 'm', 'Camisa cubana de linho terracota', 280, 0xa4533a, 'linho', 'camisa'],
+  ['m-henley-grafite', 'top', 'm', 'Henley de algodão grafite', 170, 0x3a3f46, 'algodao', 'henley'],
+  ['m-jaqueta-couro', 'top', 'm', 'Jaqueta de couro marrom', 690, 0x5a3a24, 'couro', 'jaqueta'],
   ['m-blazer-creme', 'top', 'm', 'Blazer de seda creme', 860, 0xefe4cc, 'seda', 'blazer'],
   ['m-calca-linho-areia', 'bottom', 'm', 'Calça de linho areia', 220, 0xd9c7a3, 'linho', 'calca'],
   ['m-chino-branco', 'bottom', 'm', 'Chino branco', 200, 0xf5f2ea, 'algodao', 'calca'],
   ['m-calca-seda-noite', 'bottom', 'm', 'Calça de seda azul-noite', 380, 0x1c2541, 'seda', 'calca'],
   ['m-alfaiataria-perola', 'bottom', 'm', 'Calça de alfaiataria cinza-pérola', 300, 0xbfc3c9, 'linho', 'calca'],
+  ['m-jeans-escuro', 'bottom', 'm', 'Jeans escuro reto', 240, 0x24324a, 'algodao', 'calca'],
+  ['m-cargo-caqui', 'bottom', 'm', 'Calça cargo cáqui', 230, 0x7a6f4f, 'algodao', 'calca', { cargo: 1 }],
+  ['m-bermuda-sarja', 'bottom', 'm', 'Bermuda de sarja marinho', 160, 0x26334d, 'algodao', 'bermuda'],
   ['u-espadrille', 'shoes', 'u', 'Espadrille de lona areia', 120, 0xd8c39a, 'algodao', 'sapato'],
   ['m-mocassim', 'shoes', 'm', 'Mocassim de couro caramelo', 280, 0x9c5a2c, 'couro', 'sapato'],
   ['m-sapatenis', 'shoes', 'm', 'Sapatênis marinho', 210, 0x1f2f4f, 'couro', 'sapato'],
+  ['m-bota-couro', 'shoes', 'm', 'Bota de couro café', 360, 0x3d2616, 'couro', 'bota'],
   ['f-sandalia-dourada', 'shoes', 'f', 'Sandália de tiras dourada', 260, 0xd9b45a, 'metal', 'sapato'],
   ['f-salto-nude', 'shoes', 'f', 'Salto bloco nude', 320, 0xe0b99a, 'couro', 'sapato'],
   ['u-tenis-branco', 'shoes', 'u', 'Tênis branco de couro', 240, 0xf7f7f7, 'couro', 'sapato'],
@@ -49,7 +55,8 @@ const RAW = [
   ['u-aviador', 'glasses', 'u', 'Óculos aviador dourado', 260, 0xd9b45a, 'metal', 'aviador', { lens: 0x3a2a1a }],
   ['f-gatinho', 'glasses', 'f', 'Óculos gatinho tartaruga', 240, 0x6b3e1e, 'acetato', 'gatinho', { lens: 0x24160e }],
   ['u-redondo', 'glasses', 'u', 'Óculos redondo preto', 180, 0x151515, 'acetato', 'redondo', { lens: 0x1d2a33 }],
-  ['u-esportivo', 'glasses', 'u', 'Óculos esportivo neon', 200, 0xff4fb8, 'acetato', 'esportivo', { lens: 0x29f0ff }],
+  ['u-esportivo', 'glasses', 'u', 'Óculos esportivo neon', 200, 0x2a2f36, 'acetato', 'esportivo', { lens: 0x29f0ff }],
+  ['m-relogio-aco', 'bag', 'm', 'Relógio de aço', 450, 0xb8bec6, 'metal', 'relogio'],
   ['f-tote-palha', 'bag', 'f', 'Bolsa de palha (tote)', 300, 0xd9c08a, 'palha', 'tote'],
   ['f-clutch-perola', 'bag', 'f', 'Clutch de seda pérola', 280, 0xf4efe6, 'seda', 'clutch'],
   ['u-pochete', 'bag', 'u', 'Pochete de couro caramelo', 220, 0x9c5a2c, 'couro', 'pochete'],
@@ -64,11 +71,11 @@ export const CIVIL = {
   marisol: { sex: 'f', eq: { top: 'f-blusa-seda-esmeralda', bottom: 'f-pantalona-marfim', shoes: 'f-sandalia-dourada', bag: 'f-clutch-perola' } }, // t426: calça elegante (pantalona) no lugar do vestido
   teia: { sex: 'f', skin: 0xc68642, hair: 0x10141c, eq: { top: 'f-top-hibisco', bottom: 'f-saia-longa-turquesa', shoes: 'u-tenis-branco', glasses: 'u-esportivo' } },
   solar: { sex: 'm', skin: 0xe0ac69, hair: 0x3b2314, eq: { top: 'm-blazer-creme', bottom: 'm-chino-branco', shoes: 'm-mocassim', glasses: 'u-aviador' } },
-  colosso: { sex: 'm', hair: 0x14110e, eq: { top: 'm-guayabera', bottom: 'm-calca-linho-areia', shoes: 'u-espadrille' } },
-  sentinela: { sex: 'm', eq: { top: 'm-polo-menta', bottom: 'm-alfaiataria-perola', shoes: 'm-sapatenis', hat: 'u-bone-linho' } },
+  colosso: { sex: 'm', hair: 0x14110e, eq: { top: 'm-guayabera', bottom: 'm-calca-linho-areia', shoes: 'm-sapatenis', bag: 'm-relogio-aco' } },
+  sentinela: { sex: 'm', eq: { top: 'm-polo-menta', bottom: 'm-cargo-caqui', shoes: 'm-bota-couro', hat: 'u-bone-linho' } },
   ferreo: { sex: 'm', skin: 0xd9a066, hair: 0x2c2c2c, eq: { top: 'm-camisa-palmeiras', bottom: 'm-calca-seda-noite', shoes: 'm-mocassim', hat: 'm-fedora' } },
   atlas: { sex: 'm', skin: 0x3f5fa8, hair: 0x141826, eq: { top: 'm-camisa-linho', bottom: 'm-calca-seda-noite', shoes: 'm-mocassim', glasses: 'u-aviador' } },
-  tita: { sex: 'm', eq: { top: 'm-cubana-coral', bottom: 'm-chino-branco', shoes: 'u-espadrille', glasses: 'u-redondo' } },
+  tita: { sex: 'm', eq: { top: 'm-henley-grafite', bottom: 'm-jeans-escuro', shoes: 'm-bota-couro', glasses: 'u-redondo' } },
 };
 export const sexOf = (id) => (CIVIL[id] && CIVIL[id].sex) || 'f';
 export function itemsFor(id) { const s = sexOf(id); return Object.values(ITEMS).filter(it => it.sex === 'u' || it.sex === s); }
@@ -165,6 +172,7 @@ function bagObj(it) {
   const m = STD(it.c, it.f), strap = STD(it.kind === 'tote' ? 0x9c6a3a : it.c, 'couro');
   if (it.kind === 'tote') return grp(mesh(new THREE.CylinderGeometry(0.16, 0.13, 0.26, 4, 1), m, 0, -0.13, 0, 0, Math.PI / 4), mesh(new THREE.TorusGeometry(0.1, 0.008, 4, 12, Math.PI), strap, 0, 0.0, 0));
   if (it.kind === 'clutch') return grp(mesh(box(0.2, 0.11, 0.04), m), mesh(box(0.2, 0.05, 0.045), STD(0xd9b45a, 'metal'), 0, 0.035, 0));
+  if (it.kind === 'relogio') return grp(mesh(box(0.04, 0.04, 0.01), m));
   if (it.kind === 'pochete') return grp(mesh(new THREE.CapsuleGeometry(0.05, 0.12, 2, 8), m, 0, 0, 0, 0, 0, Math.PI / 2), mesh(box(0.42, 0.02, 0.02), strap, 0, 0.02, -0.08));
   return grp(mesh(box(0.26, 0.32, 0.12), m), mesh(box(0.22, 0.12, 0.05), m, 0, -0.07, 0.07)); // mochila
 }
@@ -179,8 +187,16 @@ function legSeg(model, k, bone, next, r0, r1, m, extra, up = 0) {
   const o = new THREE.Mesh(g, m); o.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir); o.userData.ms = ms;
   attach(model, bone, o, [0, 0, 0], k);
 }
-function trousers(model, k, it) {
+function trousers(model, k, it, male) {
   const m = STD(it.c, it.f, { side: THREE.DoubleSide }); const fl = it.flare || 1;
+  if (male) { // t467: calça masculina reta (perna inteira, coxa mais grossa), cinto de couro com fivela de aço, bolsos cargo
+    const mk = model.userData.masc ? 1.1 : 1, short = it.kind === 'bermuda';
+    for (const s of ['L', 'R']) { legSeg(model, k, 'UpperLeg' + s, 'LowerLeg' + s, 0.068 * mk, 0.061 * mk, m, short ? -0.05 : 0.04); if (!short) legSeg(model, k, 'LowerLeg' + s, 'Foot' + s, 0.061 * mk, 0.057 * mk, m, 0.02, 0.05); }
+    const belt = mesh(new THREE.TorusGeometry(0.15, 0.013, 5, 22), STD(0x2a1a10, 'couro'), 0, 0, 0, Math.PI / 2); belt.scale.set(1, 0.8, 1); attach(model, 'Hips', belt, [0, 0.12, 0.005], k);
+    attach(model, 'Hips', mesh(box(0.045, 0.032, 0.012), STD(0xb8bec6, 'metal')), [0, 0.12, 0.128], k);
+    if (it.cargo) for (const s of ['L', 'R']) attach(model, 'UpperLeg' + s, mesh(box(0.07, 0.1, 0.03), STD(it.c, it.f)), [s === 'L' ? 0.07 : -0.07, -0.22, 0.0], k);
+    return;
+  }
   for (const s of ['L', 'R']) { legSeg(model, k, 'UpperLeg' + s, 'LowerLeg' + s, 0.088, 0.068, m, 0.1); legSeg(model, k, 'LowerLeg' + s, 'Foot' + s, 0.07, 0.066 + 0.03 * fl, m, 0.02, 0.05); }
   attach(model, 'Hips', mesh(new THREE.CylinderGeometry(0.16, 0.172, 0.16, 18, 1, true), m), [0, 0.04, 0], k); // cós/quadril
   attach(model, 'Hips', mesh(new THREE.TorusGeometry(0.161, 0.008, 5, 22), STD(0xd9b45a, 'metal'), 0, 0, 0, Math.PI / 2), [0, 0.115, 0], k); // cinto fino dourado
@@ -211,7 +227,17 @@ export function applyLook(A, model, mats, k, look) {
     if (sk) { const len = sk.len || 0.55; const sm = STD(sk.c, sk.f, { side: THREE.DoubleSide }); attach(model, 'Hips', mesh(skirtGeo(len, 0.2 + len * 0.17), sm), [0, 0.13, 0.0], k);
       if (sk.print) attach(model, 'Hips', mesh(printGeo(3), STD(sk.print, 'seda'), 0, 0, 0), [0, -0.05, 0.2], k);
       if (sk.belt) attach(model, 'Hips', mesh(new THREE.TorusGeometry(0.168, 0.012, 6, 22), STD(sk.belt, 'couro'), 0, 0, 0, Math.PI / 2), [0, 0.13, 0], k); }
+    const male = civ.sex === 'm';
     if (!dress && bot && bot.kind === 'pantalona') trousers(model, k, bot);
+    else if (!dress && bot && male && (bot.kind === 'calca' || bot.kind === 'bermuda')) trousers(model, k, bot, true);
+    if (male && top) { // t467: detalhes masculinos: gola de camisa, carcela com botões, jaqueta com zíper
+      const tc = STD(top.c, top.f), dk = STD(0x1c1f24, 'couro');
+      if (top.kind === 'camisa' || top.kind === 'guayabera' || top.kind === 'polo') { attach(model, 'Torso', mesh(box(0.024, top.kind === 'polo' ? 0.1 : 0.3, 0.012), tc), [0, top.kind === 'polo' ? 0.22 : 0.08, 0.152], k);
+        const bm = STD(0xe9e4da, 'acetato'); for (let i = 0; i < (top.kind === 'polo' ? 2 : 5); i++) attach(model, 'Torso', mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.006, 8), bm, 0, 0, 0, Math.PI / 2), [0, 0.24 - i * 0.065, 0.16], k); }
+      if (top.kind === 'henley') attach(model, 'Torso', mesh(box(0.03, 0.09, 0.012), dk), [0, 0.24, 0.15], k);
+      if (top.kind === 'jaqueta') { attach(model, 'Torso', mesh(box(0.012, 0.36, 0.014), STD(0xb8bec6, 'metal')), [0.02, 0.06, 0.155], k);
+        for (const s of [-1, 1]) attach(model, 'Torso', mesh(box(0.06, 0.05, 0.02), tc, 0, 0, 0, 0, 0, s * 0.4), [s * 0.07, 0.29, 0.13], k); }
+    }
     if (top) {
       if (top.print) { const pm = STD(top.print, top.f); attach(model, 'Torso', mesh(printGeo(7), pm), [0, 0.06, 0.148], k); attach(model, 'Torso', mesh(printGeo(9, true), pm), [0, 0.06, -0.14], k); }
       if (top.kind === 'camisa' || top.kind === 'guayabera' || top.kind === 'blazer') { // gola em V
@@ -223,25 +249,32 @@ export function applyLook(A, model, mats, k, look) {
         for (const s of [-1, 1]) attach(model, 'Torso', mesh(box(0.05, 0.22, 0.015), lap, 0, 0, 0, 0, 0, s * 0.25), [s * 0.06, 0.13, 0.156], k);
         attach(model, 'Torso', mesh(box(0.06, 0.02, 0.012), STD(0xff7f6e, 'seda')), [0.1, 0.17, 0.152], k); } // lenço no bolso
     }
+    if (sh && sh.kind === 'bota') { const bm = STD(sh.c, sh.f); for (const s of ['L', 'R']) attach(model, 'Foot' + s, mesh(new THREE.CylinderGeometry(0.062, 0.058, 0.15, 10), bm), [0, 0.07, -0.01], k); }
     const hat = ITEMS[eq.hat]; if (hat) attach(model, 'Head', hatObj(hat), [0, A.curls ? 0.24 : 0.19, -0.005], k, [-0.08, 0, 0]);
     const gl = ITEMS[eq.glasses]; if (gl) attach(model, 'Head', glassesObj(gl), [0, 0.105, 0.128], k);
     const bag = ITEMS[eq.bag];
-    if (bag) { const o = bagObj(bag); if (bag.kind === 'tote') attach(model, 'Torso', o, [0.21, -0.05, 0.0], k); else if (bag.kind === 'clutch') attach(model, 'PalmL', o, [0, -0.04, 0.05], k); else if (bag.kind === 'pochete') attach(model, 'Hips', o, [0, 0.09, 0.15], k); else attach(model, 'Torso', o, [0, 0.05, -0.19], k); }
+    if (bag) { const o = bagObj(bag); if (bag.kind === 'relogio') attach(model, 'LowerArmL', grp(mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.03, 12, 1, true), STD(0x2a2a2a, 'couro', { side: THREE.DoubleSide })), mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.012, 12), o.children[0] ? o.children[0].material : STD(bag.c, 'metal'), 0, 0, 0.055, Math.PI / 2)), [0, -0.13, 0], k); else if (bag.kind === 'tote') attach(model, 'Torso', o, [0.21, -0.05, 0.0], k); else if (bag.kind === 'clutch') attach(model, 'PalmL', o, [0, -0.04, 0.05], k); else if (bag.kind === 'pochete') attach(model, 'Hips', o, [0, 0.09, 0.15], k); else attach(model, 'Torso', o, [0, 0.05, -0.19], k); }
   } catch (e) { console.info('roupa parcial:', e && e.message); }
 }
 
+const MALE_TINT = { aurilio: 0xb8874a, coral: 0xc8553d };
 // trajes de herói: liga metálica + linhas de luz + equipamento do poder
 const SUIT_CLOTH = ['Shirt', 'Pants', 'Socks', 'Shoes']; const SKIN_SUIT = new Set(['teia', 'solar']);
 function applySuit(A, model, mats, by, k, S) {
   if (S.id === 'classico') { if (A.hero) { heroMaterials(A, mats); try { A.gear(model, k); } catch (e) { } } return; }
-  const L = ALLOYS[S.alloy] || ALLOYS.nano; const glow = S.glow;
+  const L0 = ALLOYS[S.alloy] || ALLOYS.nano; const glow = S.glow;
+  const isM = (CIVIL[A.id] || CIVIL[A.base] || {}).sex === 'm'; // t467: nos homens, ouro-rosado vira bronze-ouro e coral vira laranja-ferro
+  const L = isM && MALE_TINT[S.alloy] ? Object.assign({}, L0, { c: MALE_TINT[S.alloy] }) : L0;
   for (const m of mats) {
     const cloth = SUIT_CLOTH.includes(m.name) || (m.name === 'Skin' && A.hero && SKIN_SUIT.has(A.id));
     if (!cloth) continue; m.color.setHex(L.c); m.metalness = L.m; m.roughness = L.r; m.envMapIntensity = 1.5; m.emissive = new THREE.Color(glow).multiplyScalar(S.alloy === 'boreal' ? 0.12 : 0.05);
   }
   if (A.hero) { try { A.gear(model, k); } catch (e) { } }
+  const male = !A.hero && ((CIVIL[A.id] || CIVIL[A.base] || {}).sex === 'm'); // t467: Davi de traje = armadura de placas completa
+  if (male) { try { plateArmor(model, k, { plate: L.c, trim: 0x2a2f36, glow, pm: L.m, pr: L.r }); plateHelmet(model, k, { shell: 0x2a2f36, face: L.c, visor: glow }); } catch (e) { console.info('armadura parcial:', e && e.message); } }
   const gm = GLW(glow, 2); const line = (w, h, d) => mesh(box(w, h, d), gm);
   try {
+    if (!male) {
     attach(model, 'Torso', grp(line(0.24, 0.026, 0.02).rotateZ(0.55).translateX(0.08), line(0.24, 0.026, 0.02).rotateZ(-0.55).translateX(-0.08)), [0, 0.06, 0.135], k);
     attach(model, 'Torso', line(0.024, 0.3, 0.02), [0, 0.0, -0.13], k); attach(model, 'Hips', line(0.34, 0.03, 0.26), [0, 0.06, 0], k);
     const dot = (r) => mesh(new THREE.SphereGeometry(r, 10, 8), gm);
@@ -250,6 +283,7 @@ function applySuit(A, model, mats, by, k, S) {
     const plate = new THREE.MeshStandardMaterial({ color: L.c, metalness: L.m, roughness: L.r * 0.8 });
     for (const s of [1, -1]) attach(model, s > 0 ? 'UpperArmL' : 'UpperArmR', mesh(new THREE.DodecahedronGeometry(0.075, 0), plate), [s * 0.02, 0.04, 0], k);
     if (!A.hero) attach(model, 'Head', mesh(box(0.17, 0.028, 0.03), gm), [0, 0.11, 0.125], k); // viseira
+    }
     const flame = new THREE.MeshBasicMaterial({ color: glow, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
     if (S.perk === 'voo') {
       const jets = model.userData.jets || [];

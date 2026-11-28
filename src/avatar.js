@@ -63,10 +63,80 @@ export function loadAvatar(id) {
         for (const mt of [].concat(o.material)) { mt.flatShading = false; mt.roughness = mt.name === 'Hair' ? 0.55 : 0.78; mt.metalness = 0; mt.needsUpdate = true; }
       }
     });
+    if (key === AVATARS.ele.file) { try { mascBuild(gltf); } catch (e) { console.info('porte masculino parcial:', e && e.message); } }
     const box = new THREE.Box3().setFromObject(gltf.scene); gltf.rawHeight = box.max.y - box.min.y;
     return { gltf, L };
   })());
   return cache.get(key);
+}
+// t467: porte masculino (uma vez por arquivo, compartilhado por todos os clones; custo zero por quadro)
+// ombros mais largos (os ombros andam para fora na pose de repouso e nas animações), peito mais largo/profundo,
+// braços, pescoço e pernas mais grossos. Cada vértice mistura as transformações dos ossos pelos pesos da pele (sem emendas).
+export const MASC = { sh: 0.25, chest: 0.23, depth: 0.12, arm: 1.22, fore: 1.15, thigh: 1.1, shorts: 0.84, shin: 1.06, neck: 1.2 };
+function mascBuild(gltf) {
+  const meshes = []; gltf.scene.traverse(o => { if (o.isSkinnedMesh) meshes.push(o); }); if (!meshes.length) return; // uma malha por material (Shirt, Skin, Pants...)
+  const sk = meshes[0].skeleton; const P = {}; const idx = {};
+  sk.bones.forEach((b, i) => { idx[b.name] = i; P[b.name] = new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().copy(sk.boneInverses[i]).invert()); });
+  const need = ['Hips', 'Abdomen', 'Torso', 'Neck', 'Head', 'ShoulderL', 'ShoulderR', 'UpperArmL', 'UpperArmR', 'LowerArmL', 'LowerArmR', 'PalmL', 'PalmR', 'UpperLegL', 'UpperLegR', 'LowerLegL', 'LowerLegR', 'FootL', 'FootR'];
+  for (const n of need) if (!P[n]) throw new Error('osso ' + n);
+  const lat = P.UpperArmL.clone().sub(P.UpperArmR).normalize(), up = P.Neck.clone().sub(P.Hips).normalize(); const fwd = new THREE.Vector3().crossVectors(lat, up).normalize();
+  const o0 = P.Hips; const L = (v) => { const d = v.clone().sub(o0); return [d.dot(lat), d.dot(up), d.dot(fwd)]; };
+  const uAb = L(P.Abdomen)[1], uSh = L(P.UpperArmL)[1], uHead = L(P.Head)[1];
+  // transformação por osso (em coordenadas do corpo) aplicada a um ponto
+  const seg = (a, b, k) => { const A = P[a], B = P[b]; const ax = B.clone().sub(A); const l2 = ax.lengthSq(); return (v) => { const t = Math.max(0, Math.min(1, v.clone().sub(A).dot(ax) / l2)); const c = A.clone().addScaledVector(ax, t); return c.add(v.clone().sub(c).multiplyScalar(k)); }; };
+  const chest = (v, kAb) => { const [x, y, z] = L(v); const t = Math.max(0, Math.min(1, (y - uAb) / (uSh - uAb))); const fx = 1 + (kAb ?? 0.04) + (MASC.chest - (kAb ?? 0.04)) * Math.pow(t, 1.3), fz = 1 + MASC.depth * (0.4 + 0.6 * t);
+    const top = y > uSh ? Math.max(0, 1 - (y - uSh) / Math.max(1e-6, (uHead - uSh))) : 1; const kx = 1 + (fx - 1) * top, kz = 1 + (fz - 1) * top;
+    return o0.clone().addScaledVector(lat, x * kx).addScaledVector(up, y).addScaledVector(fwd, z * kz); };
+  const T = {}; let isPants = false; // short largo da base vira short reto (cabe dentro das calças)
+  const pants = { has: () => isPants };
+  T[idx.Torso] = (v) => chest(v); T[idx.Abdomen] = (v) => chest(v, 0.05);
+  T[idx.Neck] = seg('Neck', 'Head', MASC.neck);
+  for (const s of ['L', 'R']) { T[idx['UpperArm' + s]] = seg('UpperArm' + s, 'LowerArm' + s, MASC.arm); T[idx['LowerArm' + s]] = seg('LowerArm' + s, 'Palm' + s, MASC.fore);
+    { const th = seg('UpperLeg' + s, 'LowerLeg' + s, MASC.thigh), sl = seg('UpperLeg' + s, 'LowerLeg' + s, MASC.shorts); T[idx['UpperLeg' + s]] = (v, i) => (pants.has(i) ? sl : th)(v); } T[idx['LowerLeg' + s]] = seg('LowerLeg' + s, 'Foot' + s, MASC.shin);
+  } // osso do ombro: sem transformação (ele mesmo anda para fora logo abaixo)
+  { const sL = seg('UpperLegL', 'LowerLegL', MASC.shorts), sR = seg('UpperLegR', 'LowerLegR', MASC.shorts), uLeg = L(P.UpperLegL)[1], uKnee = L(P.LowerLegL)[1];
+    T[idx.Hips] = (v) => { if (!isPants) return v; const [x, y] = L(v); const t = Math.max(0, Math.min(1, (uLeg - y) / ((uLeg - uKnee) * 0.25))); if (!t) return v; const w = (x > 0 ? sL : sR)(v); return v.clone().lerp(w, t); }; }
+  const v = new THREE.Vector3(), acc = new THREE.Vector3();
+  for (const mesh of meshes) {
+    if (mesh.skeleton !== sk && mesh.skeleton.bones[0] !== sk.bones[0]) continue;
+    isPants = [].concat(mesh.material).some(m => m.name === 'Pants');
+    const g = mesh.geometry, pos = g.attributes.position, si = g.attributes.skinIndex, sw = g.attributes.skinWeight;
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i); acc.set(0, 0, 0); let wsum = 0;
+      for (let c = 0; c < 4; c++) { const w = sw.getComponent(i, c); if (!w) continue; const f = T[si.getComponent(i, c)]; acc.addScaledVector(f ? f(v, i) : v, w); wsum += w; }
+      if (wsum > 0) pos.setXYZ(i, acc.x / wsum, acc.y / wsum, acc.z / wsum);
+    }
+    pos.needsUpdate = true; g.computeVertexNormals(); g.computeBoundingSphere();
+  }
+  // ombros para fora: pose de repouso + trilhas de translação das animações (espaço do Torso ≈ eixos do modelo)
+  for (const s of ['L', 'R']) { const b = sk.bones[idx['Shoulder' + s]]; b.userData.mascDx = b.position.x * MASC.sh; b.position.x += b.userData.mascDx; }
+  for (const clip of gltf.animations) for (const tr of clip.tracks) { const m = /^Shoulder([LR])\.position$/.exec(tr.name); if (!m) continue; const dx = sk.bones[idx['Shoulder' + m[1]]].userData.mascDx; for (let i = 0; i < tr.values.length; i += 3) tr.values[i] += dx; }
+  gltf.masc = true;
+}
+// t467: junta as peças fixas presas em cada osso (placas, roupas, acessórios) numa malha por material → bem menos chamadas de desenho
+function mergeAttached(model) {
+  const keep = new Set(); for (const v of Object.values(model.userData)) { if (v && v.isObject3D) keep.add(v); if (Array.isArray(v)) for (const x of v) if (x && x.isObject3D) keep.add(x); }
+  model.updateMatrixWorld(true); const inv = new THREE.Matrix4(), rel = new THREE.Matrix4();
+  const bones = []; model.traverse(o => { if (o.isBone) bones.push(o); });
+  for (const b of bones) {
+    const groups = new Map(), done = [];
+    for (const c of [...b.children]) {
+      if (c.isBone || c.isSkinnedMesh) continue; let ok = true; const ms = [];
+      c.traverse(o => { if (keep.has(o) || o.isBone || o.isSkinnedMesh || o.isLight || (o.isMesh && (!o.visible || Array.isArray(o.material) || o.material.transparent))) ok = false; if (o.isMesh) ms.push(o); });
+      if (!ok || !ms.length) continue; done.push(c);
+      inv.copy(b.matrixWorld).invert();
+      for (const m of ms) { rel.multiplyMatrices(inv, m.matrixWorld); let g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone(); for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal') g.deleteAttribute(k); if (!g.attributes.normal) g.computeVertexNormals(); g.applyMatrix4(rel);
+        const key = m.material.uuid; if (!groups.has(key)) groups.set(key, { mat: m.material, list: [] }); groups.get(key).list.push(g); }
+    }
+    if (!done.length) continue;
+    for (const c of done) b.remove(c);
+    for (const { mat, list } of groups.values()) {
+      const n = list.reduce((a, g) => a + g.attributes.position.count, 0); const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3); let o = 0;
+      for (const g of list) { pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); o += g.attributes.position.count; g.dispose(); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); g.computeBoundingSphere();
+      const mm = new THREE.Mesh(g, mat); mm.castShadow = true; mm.frustumCulled = false; mm.userData.merged = list.length; b.add(mm);
+    }
+  }
 }
 export function preloadAvatars() { for (const id of BASE_IDS) loadAvatar(id).catch(() => { }); }
 
@@ -74,6 +144,7 @@ export function preloadAvatars() { for (const id of BASE_IDS) loadAvatar(id).cat
 export async function makeModel(id, colors, height, suit, look) {
   const A = AVATARS[id] || AVATARS.ela; const { gltf, L } = await loadAvatar(A.id);
   const model = L.SkeletonUtils.clone(gltf.scene);
+  model.userData.masc = !!gltf.masc; // t467: porte masculino (roupas/armaduras engrossam junto)
   const cols = Object.assign({}, A.colors, colors || {}); const mats = new Map();
   model.traverse(o => {
     if (!o.isMesh) return;
@@ -89,6 +160,7 @@ export async function makeModel(id, colors, height, suit, look) {
     if (A.hero) { heroMaterials(A, [...mats.values()]); try { A.gear(model, kk); } catch (e) { console.info('acessório do herói falhou:', e && e.message); } }
     if (suit) nanoSuit(A, model, [...mats.values()], kk);
   }
+  try { mergeAttached(model); } catch (e) { console.info('junção de peças falhou:', e && e.message); }
   const mixer = new THREE.AnimationMixer(model); const acts = {};
   for (const c of gltf.animations) acts[c.name] = mixer.clipAction(c);
   for (const k of ['Jump', 'Standing']) if (acts[k]) { acts[k].setLoop(THREE.LoopOnce, 1); acts[k].clampWhenFinished = true; }

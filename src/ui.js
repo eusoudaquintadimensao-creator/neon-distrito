@@ -77,7 +77,7 @@ export class UI {
     if (this.areaT <= 0) $('area').classList.remove('on');
     // balão do pedestre
     if (this._sayP && G.player.vehicle) { const s = $('say'); if (!s.classList.contains('top')) { s.classList.add('top'); s.style.left = ''; s.style.top = ''; s.style.display = ''; } } // dirigindo: falas na faixa do topo (t413)
-    else if (this._sayP) { const p = this._sayP; const s0 = $('say'); if (s0.classList.contains('top') && s0.className !== 'talk') s0.classList.remove('top'); const vpos = G.tmpV.set(p.x, (p.kind === 'talker' ? p.rig.model.position.y + 2.1 : 2.25), p.z).project(cam); const s = $('say'); if (vpos.z > 1) s.style.display = 'none'; else { s.style.display = ''; s.style.left = ((vpos.x + 1) / 2 * innerWidth) + 'px'; s.style.top = ((1 - vpos.y) / 2 * innerHeight) + 'px'; } }
+    else if (this._sayP) { const p = this._sayP; const s0 = $('say'); if (s0.classList.contains('top') && s0.className !== 'talk') s0.classList.remove('top'); const vpos = G.tmpV.set(p.x, (p.kind === 'talker' ? p.rig.model.position.y + 2.1 : 2.25), p.z).project(cam); const s = $('say'); if (vpos.z > 1) s.style.display = 'none'; else { s.style.display = ''; s.style.left = ((vpos.x + 1) / 2 * innerWidth) + 'px'; s.style.top = ((1 - vpos.y) / 2 * innerHeight) + 'px'; this.bubbleAvoid(s); } }
     this.drawMini(cam);
   }
   blips(ctx, X, Z, scale, mini) {
@@ -91,6 +91,19 @@ export class UI {
     else if (this.waypoint) dot(this.waypoint[0], this.waypoint[1], '#c86bff', 6);
   }
   route(ctx, X, Z, w) { const r = this.G.route; if (!r || r.length < 2) return; ctx.strokeStyle = '#c86bff'; ctx.lineWidth = w; ctx.lineJoin = ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(X(r[0][0]), Z(r[0][1])); for (const p of r) ctx.lineTo(X(p[0]), Z(p[1])); ctx.stroke(); }
+  // t467: a fala a pé (balão preso à cabeça) nunca fica embaixo de botão/menu: procura o ponto livre mais próximo; sem lugar, vai para a faixa do topo
+  bubbleAvoid(s) {
+    const ids = ['mapw', 'topR', 'edgeCol', 'bClean', 'topBar', 'btns', 'stickZone', 'bPause', 'bBack', 'bEye2', 'bEye3', 'eyeMenu', 'ponteQuit', 'drvCruise', 'drvGear', 'bNeutral']; const obs = [];
+    for (const id of ids) { const e = document.getElementById(id); if (!e || e.hidden) continue; const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden') continue; const parts = id === 'mapw' || id === 'eyeMenu' || id === 'edgeCol' || id === 'topBar' || id === 'btns' ? [e, ...e.querySelectorAll('button')] : [e]; for (const k of parts) { const q = k.getBoundingClientRect(); if (q.width > 4 && q.height > 4 && !(k === e && id === 'btns') && !(k === e && (id === 'edgeCol' || id === 'topBar'))) obs.push(q); } }
+    s.style.translate = ''; const r = s.getBoundingClientRect(); const W = innerWidth, H = innerHeight; const ov = (a, b) => a.left < b.right + 2 && a.right > b.left - 2 && a.top < b.bottom + 2 && a.bottom > b.top - 2;
+    const mv = (dx, dy) => ({ left: r.left + dx, right: r.right + dx, top: r.top + dy, bottom: r.bottom + dy });
+    const ok = (q) => q.left >= 4 && q.right <= W - 4 && q.top >= 4 && q.bottom <= H - 4 && !obs.some(o => ov(q, o));
+    if (ok(r)) return;
+    const c = [[0, 0]]; for (const o of obs) c.push([0, o.top - 6 - r.bottom], [0, o.bottom + 6 - r.top], [o.left - 6 - r.right, 0], [o.right + 6 - r.left, 0]);
+    for (const dx of [-120, -60, 60, 120]) for (const dy of [-60, -30, 30, 60]) c.push([dx, dy]);
+    const best = c.filter(d => ok(mv(d[0], d[1]))).sort((a, b) => Math.hypot(a[0], a[1]) - Math.hypot(b[0], b[1]))[0];
+    if (best) s.style.translate = `${Math.round(best[0])}px ${Math.round(best[1])}px`; else { s.classList.add('top'); s.style.left = ''; s.style.top = ''; s.style.translate = ''; }
+  }
   drawMini(cam) {
     const G = this.G; const c = this.mctx, W = this.mini.width, H = this.mini.height; const pl = G.player;
     const sp = pl.vehicle ? pl.vehicle.speed : 0; const zoom = (W / 220) * (1.25 - Math.min(0.55, sp / 80)) * (G.miniZoom || 1); // t440: 🔍 zoom do minimapa (olho 3) // px por px do mapa

@@ -146,3 +146,5 @@ Testes: d/i/il/al, 0 erros, regressão drive/mech/serp/ponte/linecheck + teste n
 - Lote t335 + correção do SW publicado no GitHub Pages. O SW agora só apaga caches da própria família (prefixo antes de "v"), porque o domínio é compartilhado (github.io com o Mestre Solar; site novo com os dois jogos). Conferido no ar desktop e iPhone (`/workspace/miami-test/live-drive.js`): 0 erros.
 - Os dois jogos também estão no site **MIAMI DRIVE SOLARA 2088**: https://miami-drive-solara-2088.conhecimento-solar.workers.dev (`/solara-bay/` e `/neon-distrito/`). O projeto do site fica em `/workspace/miami-drive-site` (ver NOTAS.md lá). Depois de mudar o jogo: push aqui + `build.sh` e publicar o site de novo.
 - Os testes `live-drive.js` aceitam `SITE=<url do site>` para testar a cópia do site.
+
+## t467 (12:55) porte do Solara: avatares masculinos (mascBuild), roupas masculinas, armaduras de placas, notePush/bubbleAvoid/msgguard, people.js (homens mais largos). Falta sweep Neon (m367 nd 8766).

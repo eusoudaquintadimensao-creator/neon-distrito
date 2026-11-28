@@ -34,8 +34,9 @@ export function setupMsgGuard(G) {
     for (const el of els()) {
       const r0 = vis(el) || (el._g && el._g.hid ? (el.style.visibility = '', vis(el)) : null); if (!r0) continue;
       const g = el._g || { dx: 0, dy: 0 }; const r = mv(r0, -g.dx, -g.dy);
-      if (!ov(r, zr, 3) && !placed.some(p => ov(r, p))) { if (el._g) reset(el); placed.push(r); continue; }
-      const obs = [zr, ...placed]; const all = obs.concat(hud); const w = r.right - r.left, h = r.bottom - r.top; const cands = [[0, 0]];
+      const avoidHud = el.id === 'say' && el.classList.contains('top'); // t467: a fala do pedestre (faixa do topo) também não fica embaixo de botão/menu dos olhos
+      if (!ov(r, zr, 3) && !placed.some(p => ov(r, p)) && !(avoidHud && hud.some(o => ov(r, o, 0)))) { if (el._g) reset(el); placed.push(r); continue; }
+      const obs = avoidHud ? [zr, ...placed, ...hud] : [zr, ...placed]; const all = obs.concat(hud); const w = r.right - r.left, h = r.bottom - r.top; const cands = [[0, 0]];
       for (const o of obs) { cands.push([0, o.top - 6 - r.bottom], [0, o.bottom + 6 - r.top], [o.left - 6 - r.right, 0], [o.right + 6 - r.left, 0]); }
       for (const o of obs) for (const q of obs) { cands.push([o.left - 6 - r.right, q.top - 6 - r.bottom], [o.right + 6 - r.left, q.top - 6 - r.bottom]); }
       const okc = (d) => { const q = mv(r, d[0], d[1]); if (q.top < top || q.left < 4 || q.right > Wd - 4 || q.bottom > Ht - 6) return false; if (ov(q, zr, 3)) return false; for (const o of placed) if (ov(q, o)) return false; for (const o of hud) if (ov(q, o, 0)) return false; return true; };

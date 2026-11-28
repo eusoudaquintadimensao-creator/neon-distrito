@@ -68,7 +68,7 @@ export function setupEyes(G) {
   function place() {
     if (menu.hidden) return;
     const W = innerWidth, H = innerHeight, cs = getComputedStyle(document.documentElement); const sat = parseFloat(cs.getPropertyValue('--sat')) || 0, sal = parseFloat(cs.getPropertyValue('--sal')) || 0;
-    const er = eyes[3].getBoundingClientRect(), mr = $('mapw').getBoundingClientRect(), mTop = mr.top < 70 && mr.height > 10;
+    const er = eyes[3].getBoundingClientRect(), mr = $('mapw').getBoundingClientRect(), mTop = mr.top - ($('mapw')._np || 0) < 70 && mr.height > 10; /* t467: minimapa empurrado pelo recado continua 'no alto' */
     const n = menu.children.length, bw = menu.firstChild ? menu.firstChild.offsetWidth || 54 : 54, bh = menu.firstChild ? menu.firstChild.offsetHeight || 50 : 50, gap = 6;
     let left, top, cols;
     if (H > W) { left = sal + 10; top = Math.max(mTop ? mr.bottom : 0, er.bottom) + 8; cols = 2; }
