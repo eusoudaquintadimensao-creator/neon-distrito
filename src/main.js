@@ -18,6 +18,8 @@ import { Gauchos } from './gauchos.js';
 import { Vehicle, SPECS, setVehicleLights, MOTOR, NITRO_STAGES, DRIFT_MAX } from './vehicles.js';
 import { Crowd, Hero } from './people.js';
 import { Avatar, AVATARS, AVATAR_IDS, preloadAvatars, setLookSource } from './avatar.js';
+import { applyToneMapping, TM_SAT } from './look.js';
+import { setupHD } from './hdpack.js';
 import { ARMOR } from './heroes.js';
 import { Wardrobe } from './wardrobe.js';
 import { DEVICE } from './device.js';
@@ -114,7 +116,7 @@ const BOOT = window.__boot || null; // t428: o sobrevoo de abertura já criou o 
 const renderer = (BOOT && BOOT.renderer) || new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: false });
 let pr = Math.min(devicePixelRatio || 1, Q.prMax); renderer.setPixelRatio(pr);
 renderer.setSize(innerWidth, innerHeight, false);
-renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.6;
+applyToneMapping(renderer); /* t470: ACES/Neutral/AgX por jogo (src/look.js) */
 renderer.info.autoReset = false; renderer.shadowMap.enabled = Q.shadows; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.32, 6000); // t391: near maior = profundidade precisa (sem z-fighting/pisca no chão e na água) G.camera = camera;
@@ -126,7 +128,7 @@ function setupComposer() {
   composer.addPass(new RenderPass(scene, camera));
   bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.5, 0.55, 0.86); composer.addPass(bloom);
   grade = new ShaderPass({
-    uniforms: { tDiffuse: { value: null }, uSat: { value: 1.18 }, uCon: { value: 1.08 }, uVig: { value: 0.35 }, uWarm: { value: 0.5 } },
+    uniforms: { tDiffuse: { value: null }, uSat: { value: 1.18 * TM_SAT }, uCon: { value: 1.08 }, uVig: { value: 0.35 }, uWarm: { value: 0.5 } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }',
     fragmentShader: `uniform sampler2D tDiffuse; uniform float uSat, uCon, uVig, uWarm; varying vec2 vUv;
       void main(){ vec4 c = texture2D(tDiffuse, vUv); vec3 col = max(c.rgb, 0.);
@@ -906,7 +908,8 @@ function updateAllLights() {
 }
 
 let last = performance.now(), realLast = performance.now(), fpsAcc = 0, fpsN = 0, fpsT = 0, fps = 60, saveT = 0, slowT = 0, fastT = 0;
-const fpsHist = [];
+const fpsHist = []; const ftRing = new Float32Array(120); let ftI = 0, ftN = 0; /* t470: tempos de quadro recentes (percentil 90 para a resolução dinâmica) */
+function ftP90() { if (ftN < 30) return 0; const a = Array.from(ftRing.subarray(0, ftN)).sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.floor(a.length * 0.9))]; }
 function resize() {
   const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
   if (composer) { composer.setPixelRatio(pr); composer.setSize(w, h); }
@@ -926,9 +929,11 @@ function loop(now) {
   else if (G.started && G.paused) { /* pausado: redesenha devagar */ if ((G._pz = (G._pz || 0) + dt) < 0.25) { realLast = now; fpsN = 0; fpsAcc = 0; return; } G._pz = 0; }
   else { G.t += dt; G.env.update(dt * 0.2, G.t, camera.position); G.flyT = (G.flyT || 0) + dt; flyCam(G.flyT, camera); /* t428: o mesmo sobrevoo da abertura continua atrás do menu */ G.world.setNight(G.env.night, G.env.wet); G.world.update(G.t, dt); }
   render();
-  fpsAcc += (now - realLast) / 1000; realLast = now; fpsN++; if (fpsAcc >= 1) { fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; fpsHist.push(fps); if (fpsHist.length > 30) fpsHist.shift(); if (G.showFps) $('fps').textContent = `${fps.toFixed(0)} fps · ${Q.level} · ${pr.toFixed(2)}x · ${renderer.info.render.calls} draws`; else $('fps').textContent = ''; if (G.started && !G.paused) adapt(); }
+  { const ft = now - realLast; if (ft > 0) { ftRing[ftI++ % 120] = Math.min(ft, 250); ftN = Math.min(ftN + 1, 120); } } fpsAcc += (now - realLast) / 1000; realLast = now; fpsN++; if (fpsAcc >= 1) { fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; fpsHist.push(fps); if (fpsHist.length > 30) fpsHist.shift(); if (G.showFps) $('fps').textContent = `${fps.toFixed(0)} fps · ${Q.level} · ${pr.toFixed(2)}x · ${renderer.info.render.calls} draws`; else $('fps').textContent = ''; if (G.started && !G.paused) adapt(); }
 }
-let adLo = 0, adHi = 0, adCool = 0, adDropT = -1e9; // t391: histerese + espera; não fica subindo/descendo a resolução (cada troca recriava os buffers = pisca)
+let adLo = 0, adHi = 0, adCool = 0, adDropT = -1e9, adUpT = -1e9, adUpWait = 25, adCeil = 99, adCeilT = -1e9, adP90 = 0; // t391: histerese + espera; t470: percentil 90 do tempo de quadro, espera que cresce se subir causou nova queda (sem sobe-e-desce), degraus de 0,05
+G.adaptTest = (f, ms, nowS) => { fps = f; ftRing.fill(ms); ftN = 120; G._adNow = nowS; adapt(); return +pr.toFixed(2); }; /* t470: simula 1 s de jogo (fps f, tempo de quadro ms) para o teste de histerese */
+G.adaptReset = () => { G._adNow = null; adLo = adHi = adCool = 0; adDropT = adUpT = adCeilT = -1e9; adUpWait = 25; adCeil = 99; };
 function lightenLive() { // t433: aparelho sofrendo — deixa leve NA HORA, sem recarregar a página; a próxima abertura já começa no modo leve
   G.lightened = true; const nq = Q.level === 'high' ? 'medium' : 'low'; ARMOR.low = nq === 'low'; save.autoQ = nq; persist();
   renderer.shadowMap.enabled = false; if (bloom) bloom.enabled = false; if (FX.ao) FX.ao.enabled = false; if (FX.smaa) FX.smaa.enabled = false;
@@ -936,12 +941,16 @@ function lightenLive() { // t433: aparelho sofrendo — deixa leve NA HORA, sem 
   setPR(Math.max(0.55, pr - 0.1)); G.ui.toast('Gráficos mais leves para ficar fluido ⚡', 2500);
 }
 function adapt() { // resolução dinâmica para manter fluido
-  const nowS = performance.now() / 1000; adCool = Math.max(0, adCool - 1);
+  const nowS = G._adNow != null ? G._adNow : performance.now() / 1000; adCool = Math.max(0, adCool - 1); /* G._adNow: relógio falso só nos testes */
   if (G.recording) { adLo = adHi = 0; return; } // gravando: resolução fixa (trocar o tamanho do canvas quebra o vídeo mp4)
-  adLo = fps < 40 ? adLo + 1 : 0; adHi = fps > 57 ? adHi + 1 : 0;
+  adP90 = ftP90(); const fe = adP90 > 0 ? Math.min(fps, 1000 / adP90) : fps; /* fps efetivo: o pior entre a média e o percentil 90 */
+  adLo = fe < 40 ? adLo + 1 : 0; adHi = fps > 57 && (!adP90 || adP90 < 19) ? adHi + 1 : 0;
+  const prTop = Math.min(Q.prMax, devicePixelRatio || 1, recCap(), nowS - adCeilT < 90 ? adCeil : 99);
   if (adCool > 0) { } else if (adLo >= 2 && FX.ao && FX.ao.enabled && !/fxlock/.test(location.search)) { FX.ao.enabled = false; adCool = 3; adLo = 0; adDropT = nowS; /* t435: o primeiro a sair quando pesa é a oclusão (antes de baixar a resolução) */ }
-  else if (adLo >= 2 && pr > (G.recording ? 0.9 : Q.prMin) + 0.01) { setPR(pr - 0.1); adCool = 3; adLo = 0; adDropT = nowS; }
-  else if (adHi >= 6 && nowS - adDropT > 25 && pr < Math.min(Q.prMax, devicePixelRatio || 1, recCap()) - 0.01) { setPR(pr + 0.05); adCool = 5; adHi = 0; }
+  else if (adLo >= 2 && pr > (G.recording ? 0.9 : Q.prMin) + 0.01) {
+    if (nowS - adUpT < 20 && adUpT > 0) { adCeil = Math.max(Q.prMin, pr - 0.05); adCeilT = nowS; adUpWait = Math.min(120, adUpWait * 2); } /* subir causou queda: não tenta de novo esse degrau por 90 s e espera mais */
+    setPR(pr - 0.1); adCool = 3; adLo = 0; adDropT = nowS; }
+  else if (adHi >= 6 && nowS - adDropT > adUpWait && pr < prTop - 0.01) { setPR(Math.min(prTop, pr + 0.05)); adCool = 5; adHi = 0; adUpT = nowS; if (nowS - adDropT > 3 * adUpWait) adUpWait = Math.max(25, adUpWait / 2); }
   if (save.quality === 'auto' && !urlQ && fps < 22 && pr <= Q.prMin + 0.01 && Q.level !== 'low' && !G.lightened) { slowT++; if (slowT >= 6) { lightenLive(); slowT = 0; } } else slowT = 0; // t433: antes recarregava a página aqui (o jogo "saía" e voltava para a tela inicial)
   // t432: aparelho forte de verdade (60 s fluido na resolução máxima) volta a poder usar o modo caprichado na próxima abertura
   if (save.autoQ && save.quality === 'auto' && !urlQ && fps > 55 && pr >= Math.min(Q.prMax, devicePixelRatio || 1) - 0.01) { fastT++; if (fastT >= 60 && QORD.indexOf(qDetected) > QORD.indexOf(Q.level)) { save.autoQ = null; persist(); fastT = -1e9; } } else if (fastT > 0) fastT = 0;
@@ -968,7 +977,7 @@ function step(dt) {
   updateHelis(dt, t); updateCarCall(G, dt);
   { const pv = G.player.vehicle; G.track.update(dt, t, G.env.night, camera.position, pv ? [pv, ...G.race.cars] : G.race.cars); G.fx.update(dt, pv, G.env.night, camera); G.drift.update(dt, pv && !pv.spec.air && !pv.spec.boat ? pv : null); }
   G._lodT = (G._lodT || 0) - dt; if (G._lodT <= 0) { G._lodT = 0.5; G.lodHidden = G.world.lod(camera.position.x, camera.position.z, Q.detail); }
-  if (grade) { grade.uniforms.uWarm.value = 0.4 + (1 - G.env.night) * 0.4; grade.uniforms.uSat.value = 1.15 + G.env.night * 0.1 - G.env.rain * 0.15; }
+  if (grade) { grade.uniforms.uWarm.value = 0.4 + (1 - G.env.night) * 0.4; grade.uniforms.uSat.value = (1.15 + G.env.night * 0.1 - G.env.rain * 0.15) * TM_SAT; }
   if (zoomBlur) { const bv = G.player.vehicle; const want = bv && bv.boosting ? Math.min(1, bv.speed / 40) : 0; zoomBlur.uniforms.uAmt.value += (want - zoomBlur.uniforms.uAmt.value) * Math.min(1, dt * 6); zoomBlur.enabled = zoomBlur.uniforms.uAmt.value > 0.02; }
   if (bloom) { const hb = G.player.vehicle && DriveUI.highBeam ? 1 : 0; bloom.strength = 0.26 + G.env.night * (0.2 - hb * 0.06) + G.env.wet * 0.05; bloom.threshold = 2.32 - G.env.night * (0.62 - hb * 0.22); } // t399: farol alto não estoura o bloom
   // farol do jogador à noite
@@ -1093,6 +1102,7 @@ function notePush(el) {
   G.notePushed = pushed; return pushed;
 }
 G.solaraNote = solaraNote; G.notePush = notePush;
+setupHD(G, Q, () => fps); /* t470: portão do pacote HD (só infraestrutura; sem pacotes ainda) */
 { const pn = G.ui && G.ui.phoneNote; if (pn) G.ui.phoneNote = function (...a) { const r = pn.apply(this, a); const sn = document.querySelector('.solNote'); if (sn) { notePush(sn); requestAnimationFrame(() => notePush(sn)); } return r; }; } /* t467: o aviso do celular entra já fora do minimapa empurrado */
 function solaraHi() { G.solaraHiShow = solaraHi;
   if (document.getElementById('solaraHi')) return;
@@ -1157,7 +1167,7 @@ window.MBD = {
   life: () => G.life, crowd: () => G.crowd, birds: () => G.birds, gifts: () => G.gifts, street: () => G.street, serp: () => G.serp, ponte: () => G.ponte, ilhas: () => G.ilhas, boatRace: () => G.boatRace, mega: () => G.mega, gps: () => G.gps, beach: () => G.beach, orla: () => G.orla, enterCar: (v) => G.enterCar(v), vehicles: () => G.vehicles,
   leaveCar: (s) => G.leaveCar(s), drive: () => DriveUI, respawnFade, onActTap, enterNearest, MOTOR, input,
   jetRace: () => G.jetRace, rec: () => G.rec, lighten: () => lightenLive(), persist: () => persist(), get flags() { return { started: !!G.started, resumed: !!G.resumed, lightened: !!G.lightened, pauseOpen: !!G.pauseOpen, ctxLost: G.ctxLost || 0 }; }, // t433
-  perf: () => ({ q: Q.level, detected: qDetected, autoQ: save.autoQ || null, pr: +pr.toFixed(2), prMax: Q.prMax, fps: +fps.toFixed(1), shadows: renderer.shadowMap.enabled, bloom: !!bloom, ao: !!(FX.ao && FX.ao.enabled), smaa: !!(FX.smaa && FX.smaa.enabled), fxErr: FX.err, mem: navigator.deviceMemory || null, cores: navigator.hardwareConcurrency || null }), // t432
+  perf: () => ({ hd: G.hd && G.hd.state, q: Q.level, detected: qDetected, autoQ: save.autoQ || null, pr: +pr.toFixed(2), prMax: Q.prMax, p90: +adP90.toFixed(1), adUpWait, fps: +fps.toFixed(1), shadows: renderer.shadowMap.enabled, bloom: !!bloom, ao: !!(FX.ao && FX.ao.enabled), smaa: !!(FX.smaa && FX.smaa.enabled), fxErr: FX.err, mem: navigator.deviceMemory || null, cores: navigator.hardwareConcurrency || null }), // t432
   avatar: (id) => G.setAvatar(id), power: () => G.powers.trigger(), powers: () => G.powers, talk: () => G.talk, heli: () => G.heli, helis: () => G.helis, input,
 };
 

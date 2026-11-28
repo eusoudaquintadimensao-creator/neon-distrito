@@ -34,8 +34,8 @@ let lookOf = null; export function setLookSource(fn) { lookOf = fn; }
 // ---- carregamento (uma vez por arquivo) e preparo da malha: normais suaves para um visual menos "quadrado"
 const cache = new Map(); let libs = null;
 async function getLibs() {
-  if (!libs) libs = Promise.all([import('three/addons/loaders/GLTFLoader.js'), import('three/addons/utils/SkeletonUtils.js'), import('three/addons/utils/BufferGeometryUtils.js')])
-    .then(([a, b, c]) => ({ GLTFLoader: a.GLTFLoader, SkeletonUtils: b, mergeVertices: c.mergeVertices }));
+  if (!libs) libs = Promise.all([import('three/addons/loaders/GLTFLoader.js'), import('three/addons/utils/SkeletonUtils.js'), import('three/addons/utils/BufferGeometryUtils.js'), import('three/addons/libs/meshopt_decoder.module.js').catch(() => null)])
+    .then(([a, b, c, d]) => ({ GLTFLoader: a.GLTFLoader, SkeletonUtils: b, mergeVertices: c.mergeVertices, meshopt: d && d.MeshoptDecoder })); /* t470: GLB com meshopt (decodificador ~6 KB gzip); se o decodificador falhar, usa o GLB comum */
   return libs;
 }
 function smoothGeo(geo, mergeVertices) {
@@ -56,7 +56,9 @@ export function loadAvatar(id) {
   const key = A.file;
   if (!cache.has(key)) cache.set(key, (async () => {
     const L = await getLibs();
-    const gltf = await new L.GLTFLoader().loadAsync(new URL('../' + A.file, import.meta.url).href);
+    const ld = new L.GLTFLoader(); if (L.meshopt) ld.setMeshoptDecoder(L.meshopt);
+    const url = (f) => new URL('../' + f, import.meta.url).href;
+    let gltf; try { gltf = L.meshopt ? await ld.loadAsync(url(A.file.replace(/\.glb$/, '.mo.glb'))) : await ld.loadAsync(url(A.file)); } catch (e) { gltf = await new L.GLTFLoader().loadAsync(url(A.file)); }
     gltf.scene.traverse(o => {
       if (o.isSkinnedMesh) {
         try { o.geometry = smoothGeo(o.geometry, L.mergeVertices); } catch (e) { /* mantém a malha original */ }

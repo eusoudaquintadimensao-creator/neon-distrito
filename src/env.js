@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { clamp, lerp, smooth, rng } from './util.js';
+import { TM_K } from './look.js';
 import { WATER_Y, SHORE_X } from './world.js';
 
 const KEYS = [ // hora: [fog, hemiSky, hemiGround, sun, sunI, hemiI, exposure, envI]
@@ -180,7 +181,7 @@ export function createEnv(scene, renderer, Q) {
     const golden = smooth(0.45, 0.05, sunDir.y) * (1 - E.night); su.turbidity.value = 3 + golden * 5 + gray * 12; su.rayleigh.value = 2.0 + golden * 1.6 + E.night * 1.0 - gray * 1.0; su.mieCoefficient.value = 0.003 + golden * 0.006; su.mieDirectionalG.value = 0.8 + golden * 0.08;
     const fogC = K.fog.clone().lerp(new THREE.Color(0x8a96a4).multiplyScalar(0.3 + dayAmt * 0.7), gray * 0.7);
     scene.fog.color.copy(fogC); scene.fog.density = Q.fog * (1 + E.rain * 2.2 + E.cloud * 0.3);
-    renderer.toneMappingExposure = K.exp * (1 - gray * 0.15) * Q.expo;
+    renderer.toneMappingExposure = K.exp * (1 - gray * 0.15) * Q.expo * TM_K;
     // sol/lua
     const moon = E.night > 0.5; const ld = moon ? sunDir.clone().negate().setY(Math.abs(sunDir.y) * 0.8 + 0.3).normalize() : sunDir.clone().setY(Math.max(sunDir.y, 0.06)).normalize();
     sun.color.copy(K.sun); sun.intensity = (moon ? 0.16 : K.sunI * dayAmt) * (1 - gray * 0.75);
