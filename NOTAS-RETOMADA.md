@@ -148,3 +148,6 @@ Testes: d/i/il/al, 0 erros, regressão drive/mech/serp/ponte/linecheck + teste n
 - Os testes `live-drive.js` aceitam `SITE=<url do site>` para testar a cópia do site.
 
 ## t467 (12:55) porte do Solara: avatares masculinos (mascBuild), roupas masculinas, armaduras de placas, notePush/bubbleAvoid/msgguard, people.js (homens mais largos). Falta sweep Neon (m367 nd 8766).
+
+## t467 13:16 bbda95a tem os mesmos ajustes do Solara (notePush agrupado, #note sem transição, phoneNote chama notePush, bubbleAvoid, mascBuild, plateArmor). Rodando checagem rápida t467 i/il, t439 i, t413 i, t432.
+13:25 checagem local PASS: t439 i, t413 i, t467 i/il, t432 kb2422 ff4912 ready16603 fpsMin4.5 heap105. Merge ff e push.
