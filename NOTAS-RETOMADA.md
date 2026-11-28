@@ -153,3 +153,5 @@ Testes: d/i/il/al, 0 erros, regressão drive/mech/serp/ponte/linecheck + teste n
 13:25 checagem local PASS: t439 i, t413 i, t467 i/il, t432 kb2422 ff4912 ready16603 fpsMin4.5 heap105. Merge ff e push.
 13:29 Neon Pages no ar (e260465): mascBuild/bubbleAvoid/plateArmor/phoneNote ok. t432 live PASS kb871 ff2044 ready10574 fpsAvg5.6 heap115. t467 i-live PASS. Começando redeploy do site (contadores intactos).
 13:35 site no ar com e260465. sitecheck d+i PASS.
+
+## t470 14:26 porte da fase 0 do Solara. A/B Neon: ACES lum 108/76/43 sat 83/75/112; Neutral 117/85/48 sat 87/87/155; AgX 135/109/74 sat 59/55/89 (nublado). Escolhido Neutral (sat do grade x0,86). Rodando sweep Neon (sweepV com 8766 nd neon).
