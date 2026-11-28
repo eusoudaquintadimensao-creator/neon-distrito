@@ -156,3 +156,5 @@ Testes: d/i/il/al, 0 erros, regressão drive/mech/serp/ponte/linecheck + teste n
 
 ## t470 14:26 porte da fase 0 do Solara. A/B Neon: ACES lum 108/76/43 sat 83/75/112; Neutral 117/85/48 sat 87/87/155; AgX 135/109/74 sat 59/55/89 (nublado). Escolhido Neutral (sat do grade x0,86). Rodando sweep Neon (sweepV com 8766 nd neon).
 14:50 sweep Neon ALL PASS (t439/t413/t426 x4, t423 i, t467 x4, t470 i/il, t436 i, t432 kb2453 ff4835 ready16025 fpsMin3 heap106 — t467 era kb2422, +31 como no Solara). Merge ff e push.
+14:54 Neon Pages no ar (2e20e52): Neutral (sat 0,86), hdpack, ele.mo, ftP90. t432 live PASS kb881 ff1852 ready9103 fpsAvg6.3 heap110 (t467 live kb871 ff2044 ready10574). t470 i-live PASS. Redeploy do site (contadores intactos).
+15:00 site no ar com 2e20e52. sitecheck d+i PASS.
